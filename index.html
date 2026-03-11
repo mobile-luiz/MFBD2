@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>MFBD - Calculadora de Precificação Estratégica</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                📊 MFBD Precificação Estratégica
+                <span id="syncIndicator" class="sync-indicator">
+                    <span id="syncDot" class="sync-dot offline"></span>
+                    <span id="syncText">Offline</span>
+                </span>
+                <span id="editModeBadge" class="edit-mode-badge">✏️ Editando</span>
+            </h1>
+            <div>
+                <span class="sync-indicator">⏺️ Auto-save: <span id="autoSaveStatus">Ativo</span></span>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('input', this)">📝 Input</button>
+            <button class="tab-btn" onclick="showTab('tabelas', this)">📊 Tabelas</button>
+            <button class="tab-btn" onclick="showTab('calculo', this)">🧮 Cálculo</button>
+            <button class="tab-btn" onclick="showTab('output', this)">📤 Output</button>
+            <button class="tab-btn" onclick="showTab('historico', this)">📜 Histórico</button>
+        </div>
+
+        <!-- Aba INPUT -->
+        <div id="tab-input" class="tab-content active">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">📋 Dados do Cliente e Serviço</h2>
+            
+            <div class="grid-2">
+                <!-- Cliente / Negócio -->
+                <div class="card">
+                    <div class="card-header">Cliente / Negócio</div>
+                    <div class="form-group">
+                        <label>Cliente (nome)</label>
+                        <input type="text" id="cliente_nome" placeholder="Digite o nome do cliente" value="Cliente Exemplo">
+                    </div>
+                    <div class="form-group">
+                        <label>Segmento</label>
+                        <input type="text" id="segmento" placeholder="Ex: Tecnologia, Varejo" value="Tecnologia">
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Tipo</label>
+                            <select id="tipo_cliente">
+                                <option value="Novo">Novo</option>
+                                <option value="Recorrente">Recorrente</option>
+                                <option value="Indicação">Indicação</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Risco de Inadimplência</label>
+                            <select id="risco_inadimplencia">
+                                <option value="Baixo">Baixo</option>
+                                <option value="Médio" selected>Médio</option>
+                                <option value="Alto">Alto</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Serviço / Produto -->
+                <div class="card">
+                    <div class="card-header">Serviço / Produto</div>
+                    <div class="form-group">
+                        <label>Produto/Serviço</label>
+                        <select id="produto">
+                            <option value="Consultoria Estratégica">Consultoria Estratégica</option>
+                            <option value="Desenvolvimento Web">Desenvolvimento Web</option>
+                            <option value="Desenvolvimento Mobile">Desenvolvimento Mobile</option>
+                            <option value="UI/UX Design">UI/UX Design</option>
+                            <option value="Marketing Digital">Marketing Digital</option>
+                            <option value="Treinamento In Company">Treinamento In Company</option>
+                            <option value="Suporte Técnico">Suporte Técnico</option>
+                            <option value="Infraestrutura Cloud">Infraestrutura Cloud</option>
+                            <option value="Auditoria de Segurança">Auditoria de Segurança</option>
+                            <option value="Migração para Cloud">Migração para Cloud</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Escopo</label>
+                        <textarea id="escopo" rows="3" placeholder="Descreva o escopo do serviço...">Desenvolvimento de sistema web com módulos administrativo e front-end para e-commerce</textarea>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Complexidade</label>
+                            <select id="complexidade">
+                                <option value="Baixa">Baixa</option>
+                                <option value="Média" selected>Média</option>
+                                <option value="Alta">Alta</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Urgência</label>
+                            <select id="urgencia">
+                                <option value="Normal" selected>Normal</option>
+                                <option value="Urgente">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modelo de Cobrança -->
+            <div class="card mt-4">
+                <div class="card-header">Modelo de Cobrança</div>
+                <div class="grid-4">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="modelo_cobranca" value="Hora" checked> Hora
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="modelo_cobranca" value="Preço fechado"> Preço fechado
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="modelo_cobranca" value="Retainer"> Retainer (mensal)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="modelo_cobranca" value="Êxito"> Êxito apenas
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="radio" name="modelo_cobranca" value="Híbrido"> Híbrido
+                    </label>
+                </div>
+            </div>
+
+            <!-- Equipe e Esforço -->
+            <div class="card mt-4">
+                <div class="card-header">Equipe e Esforço</div>
+                <div id="perfis-container">
+                    <div class="perfil-row">
+                        <select class="perfil-nome">
+                            <option value="Estágio">Estágio</option>
+                            <option value="Jr">Jr</option>
+                            <option value="Pl" selected>Pl</option>
+                            <option value="Sr">Sr</option>
+                            <option value="Coord">Coord</option>
+                            <option value="Sócio">Sócio</option>
+                        </select>
+                        <input type="number" class="perfil-horas" placeholder="Horas" value="80" min="0" step="1">
+                        <input type="text" class="perfil-buffer" placeholder="Buffer %" readonly value="20%">
+                        <button type="button" class="btn-danger" onclick="removerPerfil(this)" style="padding: 12px;">🗑️</button>
+                    </div>
+                    <div class="perfil-row">
+                        <select class="perfil-nome">
+                            <option value="Estágio">Estágio</option>
+                            <option value="Jr" selected>Jr</option>
+                            <option value="Pl">Pl</option>
+                            <option value="Sr">Sr</option>
+                            <option value="Coord">Coord</option>
+                            <option value="Sócio">Sócio</option>
+                        </select>
+                        <input type="number" class="perfil-horas" placeholder="Horas" value="40" min="0" step="1">
+                        <input type="text" class="perfil-buffer" placeholder="Buffer %" readonly value="20%">
+                        <button type="button" class="btn-danger" onclick="removerPerfil(this)" style="padding: 12px;">🗑️</button>
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary" onclick="adicionarPerfil()" style="margin-top: 10px; width: 100%;">+ Adicionar Perfil</button>
+            </div>
+
+            <!-- Condições Comerciais -->
+            <div class="grid-2 mt-4">
+                <div class="card">
+                    <div class="card-header">Condições Comerciais</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Entrada (%)</label>
+                            <div class="input-group">
+                                <input type="number" id="entrada" value="30" min="0" max="100" step="1">
+                                <span>%</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Parcelas</label>
+                            <input type="number" id="parcelas" value="6" min="1" max="24" step="1">
+                        </div>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Desconto pretendido (%)</label>
+                            <div class="input-group">
+                                <input type="number" id="desconto" value="0" min="0" max="100" step="1">
+                                <span>%</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Há parceiro?</label>
+                            <select id="tem_parceiro">
+                                <option value="nao">Não</option>
+                                <option value="sim">Sim</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="parceiro-group" style="display: none;">
+                        <div class="form-group">
+                            <label>% Parceiro</label>
+                            <div class="input-group">
+                                <input type="number" id="percentual_parceiro" value="10" min="0" max="100" step="1">
+                                <span>%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">CS (Compensation System)</div>
+                    <div class="form-group">
+                        <label>Aplica CS?</label>
+                        <select id="aplica_cs">
+                            <option value="sim" selected>Sim</option>
+                            <option value="nao">Não</option>
+                        </select>
+                    </div>
+                    <div id="cs-group">
+                        <div class="form-group">
+                            <label>% CS (padrão)</label>
+                            <div class="input-group">
+                                <input type="number" id="percentual_cs" value="7.5" min="0" max="100" step="0.1">
+                                <span>%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <button type="button" class="btn btn-primary" onclick="calcularPrecos()">🧮 Calcular Preços</button>
+                <button type="button" class="btn btn-success" onclick="enviarParaGoogleSheets(false)" id="btnEnviar">
+                    <span id="btnEnviarTexto">💾 Salvar Agora</span>
+                    <span id="btnEnviarLoading" style="display: none;" class="loading"></span>
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="testarConexao()">🔌 Testar Conexão</button>
+                <button type="button" class="btn btn-warning" onclick="recriarCabecalho()">🔄 Recriar Cabeçalho</button>
+                <button type="button" class="btn btn-secondary" onclick="cancelarEdicao()" id="btnCancelar" style="display: none;">❌ Cancelar Edição</button>
+            </div>
+            <div class="text-small mt-4" style="text-align: right;">
+                ⚡ Auto-save salva automaticamente após 3 segundos de inatividade
+                <br>
+                <span id="contadorAutoSave"></span>
+            </div>
+        </div>
+
+        <!-- Aba TABELAS -->
+        <div id="tab-tabelas" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">⚙️ Parâmetros e Tabelas</h2>
+            
+            <!-- Tabela 1: Custo-Hora por Perfil -->
+            <div class="card">
+                <div class="card-header">Tabela 1: Custo-Hora por Perfil (Fully Loaded)</div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Perfil</th>
+                                <th>Remuneração Mensal (R$)</th>
+                                <th>Horas Produtivas/Mês</th>
+                                <th>Custo/Hora Base</th>
+                                <th>Overhead/Hora (R$)</th>
+                                <th>Custo/Hora Total (R$)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Estágio</td>
+                                <td><input type="number" id="custo_estagio" value="2500" step="100" style="width: 120px;"></td>
+                                <td><input type="number" id="horas_estagio" value="150" step="5" style="width: 100px;"></td>
+                                <td id="custo_base_estagio" class="money">R$ 16,67</td>
+                                <td rowspan="6"><input type="number" id="overhead_hora" value="20" step="1" style="width: 80px;"></td>
+                                <td id="custo_completo_estagio" class="money">R$ 36,67</td>
+                            </tr>
+                            <tr>
+                                <td>Jr</td>
+                                <td><input type="number" id="custo_jr" value="5000" step="100" style="width: 120px;"></td>
+                                <td><input type="number" id="horas_jr" value="150" step="5" style="width: 100px;"></td>
+                                <td id="custo_base_jr" class="money">R$ 33,33</td>
+                                <td id="custo_completo_jr" class="money">R$ 53,33</td>
+                            </tr>
+                            <tr>
+                                <td>Pl</td>
+                                <td><input type="number" id="custo_pl" value="8000" step="100" style="width: 120px;"></td>
+                                <td><input type="number" id="horas_pl" value="150" step="5" style="width: 100px;"></td>
+                                <td id="custo_base_pl" class="money">R$ 53,33</td>
+                                <td id="custo_completo_pl" class="money">R$ 73,33</td>
+                            </tr>
+                            <tr>
+                                <td>Sr</td>
+                                <td><input type="number" id="custo_sr" value="12000" step="100" style="width: 120px;"></td>
+                                <td><input type="number" id="horas_sr" value="150" step="5" style="width: 100px;"></td>
+                                <td id="custo_base_sr" class="money">R$ 80,00</td>
+                                <td id="custo_completo_sr" class="money">R$ 100,00</td>
+                            </tr>
+                            <tr>
+                                <td>Coord</td>
+                                <td><input type="number" id="custo_coord" value="15000" step="100" style="width: 120px;"></td>
+                                <td><input type="number" id="horas_coord" value="150" step="5" style="width: 100px;"></td>
+                                <td id="custo_base_coord" class="money">R$ 100,00</td>
+                                <td id="custo_completo_coord" class="money">R$ 120,00</td>
+                            </tr>
+                            <tr>
+                                <td>Sócio</td>
+                                <td><input type="number" id="custo_socio" value="20000" step="100" style="width: 120px;"></td>
+                                <td><input type="number" id="horas_socio" value="150" step="5" style="width: 100px;"></td>
+                                <td id="custo_base_socio" class="money">R$ 133,33</td>
+                                <td id="custo_completo_socio" class="money">R$ 153,33</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tabela 2: Margens-Alvo por Tipo de Cobrança -->
+            <div class="grid-2 mt-4">
+                <div class="card">
+                    <div class="card-header">Tabela 2: Margens-Alvo por Modelo</div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Modelo</th>
+                                    <th>Margem Piso (%)</th>
+                                    <th>Margem Alvo (%)</th>
+                                    <th>Margem Premium (%)</th>
+                                    <th>Regras Especiais</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Hora</td>
+                                    <td><input type="number" id="margem_piso_hora" value="40" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_alvo_hora" value="55" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_premium_hora" value="65" step="1" style="width: 70px;"></td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>Preço fechado</td>
+                                    <td><input type="number" id="margem_piso_fechado" value="35" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_alvo_fechado" value="50" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_premium_fechado" value="60" step="1" style="width: 70px;"></td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>Retainer</td>
+                                    <td><input type="number" id="margem_piso_retainer" value="45" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_alvo_retainer" value="60" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_premium_retainer" value="70" step="1" style="width: 70px;"></td>
+                                    <td>Limite de horas incluso</td>
+                                </tr>
+                                <tr>
+                                    <td>Êxito</td>
+                                    <td><input type="number" id="margem_piso_exito" value="50" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_alvo_exito" value="70" step="1" style="width: 70px;"></td>
+                                    <td><input type="number" id="margem_premium_exito" value="80" step="1" style="width: 70px;"></td>
+                                    <td>Exigir entrada mínima 30%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tabela 3: Impostos e Taxas -->
+                <div class="card">
+                    <div class="card-header">Tabela 3: Impostos e Taxas</div>
+                    <div class="table-responsive">
+                        <table>
+                            <tr>
+                                <td>Regime Tributário</td>
+                                <td><input type="text" id="regime_tributario" value="Simples Nacional" style="width: 150px;"></td>
+                            </tr>
+                            <tr>
+                                <td>% Impostos sobre Receita</td>
+                                <td><input type="number" id="imposto" value="6" step="0.1" style="width: 80px;"> %</td>
+                            </tr>
+                            <tr>
+                                <td>Taxa Meio Pagamento</td>
+                                <td><input type="number" id="taxa_pagamento" value="2.5" step="0.1" style="width: 80px;"> %</td>
+                            </tr>
+                            <tr>
+                                <td>Juros Parcelamento (mensal)</td>
+                                <td><input type="number" id="juros_parcelamento" value="1" step="0.1" style="width: 80px;"> %</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela 4: CS e Tabela 5: Buffers -->
+            <div class="grid-2 mt-4">
+                <div class="card">
+                    <div class="card-header">Tabela 4: CS (Compensation System)</div>
+                    <div class="form-group">
+                        <label>Percentual Padrão CS (%)</label>
+                        <input type="number" id="cs_padrao" value="7.5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label>Base de Cálculo</label>
+                        <input type="text" id="base_cs" value="Recebimento Líquido" readonly>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">Tabela 5: Buffers Automáticos</div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Critério</th>
+                                    <th>Nível</th>
+                                    <th>Buffer (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>Complexidade</td>
+                                    <td>Baixa</td>
+                                    <td><input type="number" id="buffer_complexidade_baixa" value="10" step="1" style="width: 70px;"></td>
+                                </tr>
+                                <tr>
+                                    <td>Complexidade</td>
+                                    <td>Média</td>
+                                    <td><input type="number" id="buffer_complexidade_media" value="20" step="1" style="width: 70px;"></td>
+                                </tr>
+                                <tr>
+                                    <td>Complexidade</td>
+                                    <td>Alta</td>
+                                    <td><input type="number" id="buffer_complexidade_alta" value="30" step="1" style="width: 70px;"></td>
+                                </tr>
+                                <tr>
+                                    <td>Urgência</td>
+                                    <td>Normal</td>
+                                    <td><input type="number" id="buffer_urgencia_normal" value="0" step="1" style="width: 70px;"></td>
+                                </tr>
+                                <tr>
+                                    <td>Urgência</td>
+                                    <td>Urgente</td>
+                                    <td><input type="number" id="buffer_urgencia_urgente" value="20" step="1" style="width: 70px;"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-bar mt-4">
+                <button type="button" class="btn btn-primary" onclick="atualizarTabelas()">🔄 Atualizar Parâmetros</button>
+            </div>
+        </div>
+
+        <!-- Aba CÁLCULO -->
+        <div id="tab-calculo" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">🧮 Memória de Cálculo</h2>
+            
+            <div class="card">
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Descrição</th>
+                                <th>Fórmula</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-calculo">
+                            <tr>
+                                <td>1</td>
+                                <td>Custo Direto Total</td>
+                                <td>SOMA(Horas x Custo/Hora)</td>
+                                <td id="calculo-custo-direto" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>Buffer Complexidade</td>
+                                <td>SE(Complexidade)</td>
+                                <td id="calculo-buffer-complexidade" class="percent">20%</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>Buffer Urgência</td>
+                                <td>SE(Urgência)</td>
+                                <td id="calculo-buffer-urgencia" class="percent">0%</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>Custo Direto c/ Buffer</td>
+                                <td>Custo Direto x (1+BufferC) x (1+BufferU)</td>
+                                <td id="calculo-custo-buffer" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td>Overhead Total</td>
+                                <td>Total Horas x Overhead/Hora x (1+BufferTotal)</td>
+                                <td id="calculo-overhead" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr style="font-weight: bold; background-color: #f0f0f0;">
+                                <td>6</td>
+                                <td>CUSTO TOTAL</td>
+                                <td>Custo c/ Buffer + Overhead Total</td>
+                                <td id="calculo-custo-total" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>7</td>
+                                <td>Margem Piso (%)</td>
+                                <td>PROCV(Modelo;TabelaMargens)</td>
+                                <td id="calculo-margem-piso" class="percent">40,0%</td>
+                            </tr>
+                            <tr>
+                                <td>8</td>
+                                <td>PREÇO PISO</td>
+                                <td>Custo Total / (1 - MargemPiso)</td>
+                                <td id="calculo-preco-piso" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>9</td>
+                                <td>Margem Alvo (%)</td>
+                                <td>PROCV(Modelo;TabelaMargens)</td>
+                                <td id="calculo-margem-alvo" class="percent">55,0%</td>
+                            </tr>
+                            <tr>
+                                <td>10</td>
+                                <td>PREÇO ALVO</td>
+                                <td>Custo Total / (1 - MargemAlvo)</td>
+                                <td id="calculo-preco-alvo" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>11</td>
+                                <td>Impostos</td>
+                                <td>Preço Alvo x %Impostos</td>
+                                <td id="calculo-impostos" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>12</td>
+                                <td>CS</td>
+                                <td>SE(AplicaCS; Preço Alvo x %CS; 0)</td>
+                                <td id="calculo-cs" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>13</td>
+                                <td>Parceiro</td>
+                                <td>SE(TemParceiro; Preço Alvo x %Parceiro; 0)</td>
+                                <td id="calculo-parceiro" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>14</td>
+                                <td>Receita Líquida</td>
+                                <td>Preço Alvo - Impostos - CS - Parceiro</td>
+                                <td id="calculo-receita-liquida" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>15</td>
+                                <td>Margem Líquida (R$)</td>
+                                <td>Receita Líquida - Custo Total</td>
+                                <td id="calculo-margem-liquida-r$" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>16</td>
+                                <td>Margem Líquida (%)</td>
+                                <td>Margem Líquida R$ / Preço Alvo</td>
+                                <td id="calculo-margem-liquida" class="percent">0,0%</td>
+                            </tr>
+                            <tr>
+                                <td>17</td>
+                                <td>Custo Parcelamento</td>
+                                <td>Valor Presente - Preço Alvo</td>
+                                <td id="calculo-custo-parcelamento" class="money">R$ 0,00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba OUTPUT -->
+        <div id="tab-output" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">📤 Proposta Comercial</h2>
+            
+            <!-- Alertas -->
+            <div id="alertas-container" class="mb-4"></div>
+            
+            <!-- Preços -->
+            <div class="grid-3 mb-6">
+                <div class="price-box piso">
+                    <div class="price-title">PREÇO PISO</div>
+                    <div class="price-amount" id="output-preco-piso">R$ 0,00</div>
+                    <div style="font-size: 12px; color: #666;">Não vender abaixo</div>
+                </div>
+                <div class="price-box alvo">
+                    <div class="price-title">PREÇO ALVO</div>
+                    <div class="price-amount" id="output-preco-alvo">R$ 0,00</div>
+                    <div style="font-size: 12px; color: #666;">Recomendado</div>
+                </div>
+                <div class="price-box premium">
+                    <div class="price-title">PREÇO PREMIUM</div>
+                    <div class="price-amount" id="output-preco-premium">R$ 0,00</div>
+                    <div style="font-size: 12px; color: #666;">Valor agregado</div>
+                </div>
+            </div>
+            
+            <!-- Detalhamento e Pagamento -->
+            <div class="grid-2">
+                <div class="card">
+                    <div class="card-header">Detalhamento Financeiro</div>
+                    <div class="table-responsive">
+                        <table style="width: 100%;">
+                            <tr>
+                                <td>Custo Total Estimado:</td>
+                                <td class="money"><strong id="output-custo-total">R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Impostos Estimados:</td>
+                                <td class="money"><strong id="output-impostos">R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>CS Estimado:</td>
+                                <td class="money"><strong id="output-cs">R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Parceiro:</td>
+                                <td class="money"><strong id="output-parceiro">R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Custo Parcelamento:</td>
+                                <td class="money"><strong id="output-custo-parcelamento">R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Margem Líquida (R$):</td>
+                                <td class="money"><strong id="output-margem-r$">R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Margem Líquida (%):</td>
+                                <td class="percent"><strong id="output-margem">0,0%</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">Condições de Pagamento</div>
+                    <div class="table-responsive">
+                        <table style="width: 100%;">
+                            <tr>
+                                <td>Entrada:</td>
+                                <td class="money"><strong id="output-entrada">R$ 0,00</strong> (<span id="output-entrada-percent">30</span>%)</td>
+                            </tr>
+                            <tr>
+                                <td>Parcelas:</td>
+                                <td class="money"><strong id="output-parcelas">6x de R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Valor Total c/ Juros:</td>
+                                <td class="money"><strong id="output-total-juros">R$ 0,00</strong></td>
+                            </tr>
+                            <tr>
+                                <td>Valor Total à Vista:</td>
+                                <td class="money"><strong id="output-total">R$ 0,00</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aba HISTÓRICO -->
+        <div id="tab-historico" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #2d3748;">📜 Histórico de Simulações</h2>
+            
+            <div class="action-bar mb-4">
+                <button type="button" class="btn btn-primary" onclick="carregarHistoricoDoGoogle()">
+                    🔄 Sincronizar Agora
+                </button>
+                <button type="button" class="btn btn-danger" onclick="limparHistoricoLocal()">
+                    🗑️ Limpar Visualização
+                </button>
+                <button type="button" class="btn btn-success" onclick="exportarCSV()">
+                    📥 Exportar CSV
+                </button>
+            </div>
+            
+            <div class="history-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Data/Hora</th>
+                            <th>Cliente</th>
+                            <th>Segmento</th>
+                            <th>Tipo</th>
+                            <th>Risco</th>
+                            <th>Produto</th>
+                            <th>Modelo</th>
+                            <th>Preço Alvo</th>
+                            <th>Custo Total</th>
+                            <th>Margem %</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historico-lista">
+                        <tr>
+                            <td colspan="13" style="text-align: center; padding: 40px;">
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                                    <span style="font-size: 48px;">📊</span>
+                                    <span style="font-size: 16px; color: #718096;">Clique em "Sincronizar Agora" para carregar os dados</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4" style="display: flex; justify-content: space-between; align-items: center; color: #718096; font-size: 12px;">
+                <span>Total de registros: <span id="total-registros">0</span></span>
+                <span>Última sincronização: <span id="ultima-sincronizacao">---</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>
