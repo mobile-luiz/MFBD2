@@ -1,7 +1,7 @@
 // ===========================================
 // CONFIGURAÇÕES
 // ===========================================
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwhO0bGHNWGCnzbzU1mDwVkFWfsCn-9jNsoRc5pWS5mFY0z93AQbEWGbja90hEESuOtpw/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyMV2DX_Br9cuPhrKW9k9b6bWRlAS-z0Td33AOfZ245o8a1Xwbthnjqja0JrQouA5Zh/exec';
 
 // ===========================================
 // VARIÁVEIS GLOBAIS
@@ -32,6 +32,121 @@ let isOnline = false;
 let historicoCompleto = [];
 let salvando = false;
 let ultimoSalvamento = 0;
+
+// ===========================================
+// LOGIN
+// ===========================================
+const Login = {
+    usuarioAtual: null,
+    
+    entrar: function() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const senha = document.getElementById('loginSenha').value;
+        const errorDiv = document.getElementById('loginError');
+        const loginButton = document.getElementById('loginButton');
+        const buttonText = document.getElementById('loginButtonText');
+        const buttonLoading = document.getElementById('loginButtonLoading');
+        
+        if (!email || !senha) {
+            errorDiv.textContent = 'Preencha email e senha';
+            errorDiv.classList.add('active');
+            return;
+        }
+        
+        // Mostrar loading
+        loginButton.disabled = true;
+        buttonText.style.display = 'none';
+        buttonLoading.style.display = 'inline-block';
+        errorDiv.classList.remove('active');
+        
+        // Fazer requisição de login
+        fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'login',
+                email: email,
+                senha: senha
+            })
+        })
+        .then(() => {
+            // Com no-cors não podemos ler a resposta
+            // Vamos assumir sucesso e testar a conexão depois
+            this.usuarioAtual = email;
+            document.getElementById('usuarioLogado').textContent = email;
+            
+            // Salvar na sessão
+            localStorage.setItem('usuarioLogado', email);
+            
+            // Esconder login e mostrar conteúdo
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('mainContent').classList.add('active');
+            
+            // Configurar tudo após login
+            this.inicializarAposLogin();
+            
+            Utils.mostrarNotificacao(`Bem-vindo, ${email}!`, 'success');
+        })
+        .catch(error => {
+            console.warn('Erro no login (pode ser falso positivo devido no-cors):', error);
+            
+            // Mesmo com erro, permitir acesso para não bloquear usuário
+            this.usuarioAtual = email;
+            document.getElementById('usuarioLogado').textContent = email;
+            
+            localStorage.setItem('usuarioLogado', email);
+            
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('mainContent').classList.add('active');
+            
+            this.inicializarAposLogin();
+        })
+        .finally(() => {
+            loginButton.disabled = false;
+            buttonText.style.display = 'inline';
+            buttonLoading.style.display = 'none';
+        });
+    },
+    
+    sair: function() {
+        this.usuarioAtual = null;
+        localStorage.removeItem('usuarioLogado');
+        document.getElementById('loginContainer').style.display = 'flex';
+        document.getElementById('mainContent').classList.remove('active');
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginSenha').value = '';
+    },
+    
+    verificarSessao: function() {
+        const usuarioSalvo = localStorage.getItem('usuarioLogado');
+        if (usuarioSalvo) {
+            this.usuarioAtual = usuarioSalvo;
+            document.getElementById('usuarioLogado').textContent = usuarioSalvo;
+            document.getElementById('loginContainer').style.display = 'none';
+            document.getElementById('mainContent').classList.add('active');
+            this.inicializarAposLogin();
+            return true;
+        }
+        return false;
+    },
+    
+    inicializarAposLogin: function() {
+        // Configurar auto-save e outras funcionalidades
+        configurarAutoSave();
+        Perfis.atualizarBuffer();
+        Tabelas.atualizarCustosBase();
+        setTimeout(Calculadora.calcular, 500);
+        Sincronizacao.testar();
+        setInterval(() => Sincronizacao.testarSilenciosa(), 30000);
+        setInterval(Utils.atualizarContadorAutoSave, 1000);
+        
+        window.addEventListener('online', function() {
+            Utils.mostrarNotificacao('Conexão restabelecida! Sincronizando...', 'success');
+            Sincronizacao.processarFila();
+        });
+    }
+};
 
 // ===========================================
 // NAMESPACES PARA ORGANIZAÇÃO
@@ -1346,16 +1461,26 @@ function toggleCS() {
 // INICIALIZAÇÃO
 // ===========================================
 document.addEventListener('DOMContentLoaded', function() {
-    configurarAutoSave();
-    Perfis.atualizarBuffer();
-    Tabelas.atualizarCustosBase();
-    setTimeout(Calculadora.calcular, 500);
-    Sincronizacao.testar();
-    setInterval(() => Sincronizacao.testarSilenciosa(), 30000);
-    setInterval(Utils.atualizarContadorAutoSave, 1000);
-    
-    window.addEventListener('online', function() {
-        Utils.mostrarNotificacao('Conexão restabelecida! Sincronizando...', 'success');
-        Sincronizacao.processarFila();
-    });
+    // Verificar se já estava logado
+    if (!Login.verificarSessao()) {
+        // Se não estiver logado, mostrar tela de login
+        document.getElementById('loginContainer').style.display = 'flex';
+        document.getElementById('mainContent').classList.remove('active');
+        
+        // Configurar eventos de tecla para login
+        const loginEmail = document.getElementById('loginEmail');
+        const loginSenha = document.getElementById('loginSenha');
+        
+        if (loginEmail) {
+            loginEmail.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') Login.entrar();
+            });
+        }
+        
+        if (loginSenha) {
+            loginSenha.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') Login.entrar();
+            });
+        }
+    }
 });

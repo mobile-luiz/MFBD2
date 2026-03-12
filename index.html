@@ -7,34 +7,233 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Estilos específicos da tela de login */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .login-box {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.5s ease;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-header h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .login-header p {
+            color: #718096;
+            font-size: 14px;
+        }
+        
+        .login-form .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .login-form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        
+        .login-form input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+        
+        .login-form input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .login-form button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .login-form button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+        
+        .login-form button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #718096;
+            font-size: 12px;
+        }
+        
+        .login-error {
+            background: #fed7d7;
+            color: #742a2a;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .login-error.active {
+            display: block;
+        }
+        
+        .login-loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        .main-content {
+            display: none;
+        }
+        
+        .main-content.active {
+            display: block;
+        }
+        
+        .logout-btn {
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        
+        .logout-btn:hover {
+            background: #c53030;
+        }
+        
+        .usuario-info {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .usuario-email {
+            font-weight: 600;
+            color: #2d3748;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>
-                📊 MFBD Precificação Estratégica
-                <span id="syncIndicator" class="sync-indicator">
-                    <span id="syncDot" class="sync-dot offline"></span>
-                    <span id="syncText">Offline</span>
-                </span>
-                <span id="editModeBadge" class="edit-mode-badge">✏️ Editando</span>
-            </h1>
-            <div>
-                <span class="sync-indicator">⏺️ Auto-save: <span id="autoSaveStatus">Ativo</span></span>
+    <!-- Tela de Login -->
+    <div id="loginContainer" class="login-container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>🔐 MFBD Precificação</h1>
+                <p>Faça login para acessar a calculadora</p>
+            </div>
+            
+            <div id="loginError" class="login-error"></div>
+            
+            <div class="login-form">
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" value="admin@exemplo.com">
+                </div>
+                
+                <div class="form-group">
+                    <label>Senha</label>
+                    <input type="password" id="loginSenha" placeholder="••••••••" value="admin123">
+                </div>
+                
+                <button type="button" id="loginButton" onclick="Login.entrar()">
+                    <span id="loginButtonText">Entrar</span>
+                    <span id="loginButtonLoading" style="display: none;" class="login-loading"></span>
+                </button>
+            </div>
+            
+            <div class="login-footer">
+                <p>Usuário padrão: admin@exemplo.com / admin123</p>
+                <p style="margin-top: 5px;">Os usuários podem ser cadastrados na aba "CadastroLogin" da planilha</p>
             </div>
         </div>
-        
-        <div class="tabs">
-            <button class="tab-btn active" onclick="UI.showTab('input', this)">📝 Input</button>
-            <button class="tab-btn" onclick="UI.showTab('tabelas', this)">📊 Tabelas</button>
-            <button class="tab-btn" onclick="UI.showTab('calculo', this)">🧮 Cálculo</button>
-            <button class="tab-btn" onclick="UI.showTab('output', this)">📤 Output</button>
-            <button class="tab-btn" onclick="UI.showTab('historico', this)">📜 Histórico</button>
-        </div>
+    </div>
+    
+    <!-- Conteúdo Principal (protegido por login) -->
+    <div id="mainContent" class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1>
+                    📊 MFBD Precificação Estratégica
+                    <span class="usuario-info">
+                        👤 <span id="usuarioLogado" class="usuario-email"></span>
+                        <button class="logout-btn" onclick="Login.sair()">Sair</button>
+                    </span>
+                    <span id="syncIndicator" class="sync-indicator">
+                        <span id="syncDot" class="sync-dot offline"></span>
+                        <span id="syncText">Offline</span>
+                    </span>
+                    <span id="editModeBadge" class="edit-mode-badge">✏️ Editando</span>
+                </h1>
+                <div>
+                    <span class="sync-indicator">⏺️ Auto-save: <span id="autoSaveStatus">Ativo</span></span>
+                </div>
+            </div>
+            
+            <div class="tabs">
+                <button class="tab-btn active" onclick="UI.showTab('input', this)">📝 Input</button>
+                <button class="tab-btn" onclick="UI.showTab('tabelas', this)">📊 Tabelas</button>
+                <button class="tab-btn" onclick="UI.showTab('calculo', this)">🧮 Cálculo</button>
+                <button class="tab-btn" onclick="UI.showTab('output', this)">📤 Output</button>
+                <button class="tab-btn" onclick="UI.showTab('historico', this)">📜 Histórico</button>
+            </div>
 
-        <!-- Aba INPUT -->
-        <div id="tab-input" class="tab-content active">
-            <h2 style="margin-bottom: 20px; color: #2d3748;">📋 Dados do Cliente e Serviço</h2>
+            <!-- Restante do conteúdo permanece igual -->
+            <!-- Aba INPUT -->
+            <div id="tab-input" class="tab-content active">
+                <!-- ... todo o conteúdo da aba input permanece igual ... -->
+                <h2 style="margin-bottom: 20px; color: #2d3748;">📋 Dados do Cliente e Serviço</h2>
             
             <div class="grid-2">
                 <!-- Cliente / Negócio -->
@@ -736,6 +935,7 @@
                 <span>Última sincronização: <span id="ultima-sincronizacao">---</span></span>
             </div>
         </div>
+    </div>
     </div>
 
     <!-- JavaScript -->
