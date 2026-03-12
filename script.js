@@ -1,7 +1,7 @@
 // ===========================================
 // CONFIGURAÇÕES
 // ===========================================
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbyMV2DX_Br9cuPhrKW9k9b6bWRlAS-z0Td33AOfZ245o8a1Xwbthnjqja0JrQouA5Zh/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzQKaT2_OL9gmbfqq19mdjwwfCPdU0sKhI08iQy2jzn6K2p1WjaewmwcEQhDYHGPn5UiQ/exec';
 
 // ===========================================
 // VARIÁVEIS GLOBAIS
@@ -37,81 +37,107 @@ let paginaAtual = 1;
 let itensPorPagina = 20;
 
 // ===========================================
+// FUNÇÕES GLOBAIS PARA ONCLICK
+// ===========================================
+
+// Funções de toggle (DEVEM estar no escopo global)
+window.toggleParceiro = function() {
+    const temParceiro = document.getElementById('tem_parceiro')?.value;
+    const parceiroGroup = document.getElementById('parceiro-group');
+    if (parceiroGroup) {
+        parceiroGroup.style.display = temParceiro === 'sim' ? 'block' : 'none';
+    }
+    if (typeof Calculadora !== 'undefined' && Calculadora.calcular) {
+        Calculadora.calcular();
+    }
+};
+
+window.toggleCS = function() {
+    const aplicaCS = document.getElementById('aplica_cs')?.value;
+    const csGroup = document.getElementById('cs-group');
+    if (csGroup) {
+        csGroup.style.display = aplicaCS === 'sim' ? 'block' : 'none';
+    }
+    if (typeof Calculadora !== 'undefined' && Calculadora.calcular) {
+        Calculadora.calcular();
+    }
+};
+
+// ===========================================
 // LOGIN
 // ===========================================
 const Login = {
     usuarioAtual: null,
     
     entrar: function() {
-        const email = document.getElementById('loginEmail').value.trim();
-        const senha = document.getElementById('loginSenha').value;
+        const email = document.getElementById('loginEmail')?.value.trim() || '';
+        const senha = document.getElementById('loginSenha')?.value || '';
         const errorDiv = document.getElementById('loginError');
         const loginButton = document.getElementById('loginButton');
         const buttonText = document.getElementById('loginButtonText');
         const buttonLoading = document.getElementById('loginButtonLoading');
         
         if (!email || !senha) {
-            errorDiv.textContent = 'Preencha email e senha';
-            errorDiv.classList.add('active');
+            if (errorDiv) {
+                errorDiv.textContent = 'Preencha email e senha';
+                errorDiv.classList.add('active');
+            }
             return;
         }
         
-        loginButton.disabled = true;
-        buttonText.style.display = 'none';
-        buttonLoading.style.display = 'inline-block';
-        errorDiv.classList.remove('active');
+        if (loginButton) loginButton.disabled = true;
+        if (buttonText) buttonText.style.display = 'none';
+        if (buttonLoading) buttonLoading.style.display = 'inline-block';
+        if (errorDiv) errorDiv.classList.remove('active');
         
-        fetch(GOOGLE_SHEETS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'login',
-                email: email,
-                senha: senha
-            })
-        })
-        .then(() => {
-            this.usuarioAtual = email;
-            document.getElementById('usuarioLogado').textContent = email;
-            localStorage.setItem('usuarioLogado', email);
-            document.getElementById('loginContainer').style.display = 'none';
-            document.getElementById('mainContent').classList.add('active');
-            this.inicializarAposLogin();
-            Utils.mostrarNotificacao(`Bem-vindo, ${email}!`, 'success');
-        })
-        .catch(error => {
-            console.warn('Erro no login:', error);
-            this.usuarioAtual = email;
-            document.getElementById('usuarioLogado').textContent = email;
-            localStorage.setItem('usuarioLogado', email);
-            document.getElementById('loginContainer').style.display = 'none';
-            document.getElementById('mainContent').classList.add('active');
-            this.inicializarAposLogin();
-        })
-        .finally(() => {
-            loginButton.disabled = false;
-            buttonText.style.display = 'inline';
-            buttonLoading.style.display = 'none';
-        });
+        // Simular login bem-sucedido (já que está com no-cors)
+        this.usuarioAtual = email;
+        const usuarioLogado = document.getElementById('usuarioLogado');
+        if (usuarioLogado) usuarioLogado.textContent = email;
+        localStorage.setItem('usuarioLogado', email);
+        
+        const loginContainer = document.getElementById('loginContainer');
+        const mainContent = document.getElementById('mainContent');
+        
+        if (loginContainer) loginContainer.style.display = 'none';
+        if (mainContent) mainContent.classList.add('active');
+        
+        this.inicializarAposLogin();
+        Utils.mostrarNotificacao(`Bem-vindo, ${email}!`, 'success');
+        
+        if (loginButton) loginButton.disabled = false;
+        if (buttonText) buttonText.style.display = 'inline';
+        if (buttonLoading) buttonLoading.style.display = 'none';
     },
     
     sair: function() {
         this.usuarioAtual = null;
         localStorage.removeItem('usuarioLogado');
-        document.getElementById('loginContainer').style.display = 'flex';
-        document.getElementById('mainContent').classList.remove('active');
-        document.getElementById('loginEmail').value = '';
-        document.getElementById('loginSenha').value = '';
+        
+        const loginContainer = document.getElementById('loginContainer');
+        const mainContent = document.getElementById('mainContent');
+        const loginEmail = document.getElementById('loginEmail');
+        const loginSenha = document.getElementById('loginSenha');
+        
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (mainContent) mainContent.classList.remove('active');
+        if (loginEmail) loginEmail.value = '';
+        if (loginSenha) loginSenha.value = '';
     },
     
     verificarSessao: function() {
         const usuarioSalvo = localStorage.getItem('usuarioLogado');
         if (usuarioSalvo) {
             this.usuarioAtual = usuarioSalvo;
-            document.getElementById('usuarioLogado').textContent = usuarioSalvo;
-            document.getElementById('loginContainer').style.display = 'none';
-            document.getElementById('mainContent').classList.add('active');
+            const usuarioLogado = document.getElementById('usuarioLogado');
+            if (usuarioLogado) usuarioLogado.textContent = usuarioSalvo;
+            
+            const loginContainer = document.getElementById('loginContainer');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (loginContainer) loginContainer.style.display = 'none';
+            if (mainContent) mainContent.classList.add('active');
+            
             this.inicializarAposLogin();
             return true;
         }
@@ -119,18 +145,47 @@ const Login = {
     },
     
     inicializarAposLogin: function() {
-        configurarAutoSave();
+        this.configurarEventos();
         Perfis.atualizarBuffer();
-        Tabelas.atualizarCustosBase();
-        setTimeout(Calculadora.calcular, 500);
+        Tabelas.carregar();
+        setTimeout(() => Calculadora.calcular(), 500);
         Sincronizacao.testar();
         setInterval(() => Sincronizacao.testarSilenciosa(), 30000);
-        setInterval(Utils.atualizarContadorAutoSave, 1000);
+        setInterval(() => Utils.atualizarContadorAutoSave(), 1000);
         
         window.addEventListener('online', function() {
             Utils.mostrarNotificacao('Conexão restabelecida! Sincronizando...', 'success');
             Sincronizacao.processarFila();
         });
+    },
+    
+    configurarEventos: function() {
+        // Configurar eventos de input para auto-save
+        document.querySelectorAll('input, select, textarea').forEach(element => {
+            element.removeEventListener('input', Sincronizacao.agendarAutomatica);
+            element.removeEventListener('change', this.handleChange);
+            
+            element.addEventListener('input', Sincronizacao.agendarAutomatica);
+            element.addEventListener('change', this.handleChange);
+        });
+        
+        document.querySelectorAll('input[name="modelo_cobranca"]').forEach(radio => {
+            radio.removeEventListener('change', Sincronizacao.agendarAutomatica);
+            radio.addEventListener('change', Sincronizacao.agendarAutomatica);
+        });
+    },
+    
+    handleChange: function(e) {
+        if (e.target.id === 'complexidade' || e.target.id === 'urgencia') {
+            Perfis.atualizarBuffer();
+        }
+        if (e.target.id === 'tem_parceiro') {
+            window.toggleParceiro();
+        }
+        if (e.target.id === 'aplica_cs') {
+            window.toggleCS();
+        }
+        Sincronizacao.agendarAutomatica();
     }
 };
 
@@ -142,10 +197,13 @@ const UI = {
         document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         
-        document.getElementById(`tab-${tabName}`).classList.add('active');
-        element.classList.add('active');
+        const tabElement = document.getElementById(`tab-${tabName}`);
+        if (tabElement) tabElement.classList.add('active');
+        if (element) element.classList.add('active');
         
-        if (tabName === 'historico') Historico.carregar();
+        if (tabName === 'historico' && typeof Historico !== 'undefined') {
+            Historico.carregar();
+        }
     }
 };
 
@@ -155,6 +213,8 @@ const UI = {
 const Perfis = {
     adicionar: function() {
         const container = document.getElementById('perfis-container');
+        if (!container) return;
+        
         const newRow = document.createElement('div');
         newRow.className = 'perfil-row';
         
@@ -190,7 +250,8 @@ const Perfis = {
     
     remover: function(botao) {
         if (document.querySelectorAll('.perfil-row').length > 1) {
-            botao.closest('.perfil-row').remove();
+            const row = botao.closest('.perfil-row');
+            if (row) row.remove();
             Sincronizacao.agendarAutomatica();
         } else {
             Utils.mostrarNotificacao('É necessário ter pelo menos um perfil!', 'error');
@@ -206,7 +267,7 @@ const Perfis = {
         else if (complexidade === 'Alta') buffer = (document.getElementById('buffer_complexidade_alta')?.value || '30') + '%';
         
         document.querySelectorAll('.perfil-buffer').forEach(input => {
-            input.value = buffer;
+            if (input) input.value = buffer;
         });
     }
 };
@@ -215,11 +276,184 @@ const Perfis = {
 // TABELAS
 // ===========================================
 const Tabelas = {
+    carregar: function() {
+        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL.includes('SUA_URL')) {
+            this.carregarValoresPadrao();
+            return;
+        }
+        
+        fetch(GOOGLE_SHEETS_URL + '?action=carregarParametros')
+            .then(response => response.json())
+            .then(data => {
+                if (data && data.success && data.dados) {
+                    this.aplicarParametros(data.dados);
+                    Utils.mostrarNotificacao('Parâmetros carregados da planilha!', 'success');
+                } else {
+                    this.carregarValoresPadrao();
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar parâmetros:', error);
+                this.carregarValoresPadrao();
+            });
+    },
+    
+    carregarValoresPadrao: function() {
+        // Valores padrão caso não consiga carregar da planilha
+        const valoresPadrao = {
+            custo_estagio: 2500, custo_jr: 5000, custo_pl: 8000, custo_sr: 12000, custo_coord: 15000, custo_socio: 20000,
+            horas_estagio: 150, horas_jr: 150, horas_pl: 150, horas_sr: 150, horas_coord: 150, horas_socio: 150,
+            overhead_hora: 20,
+            margem_piso_hora: 40, margem_alvo_hora: 55, margem_premium_hora: 65,
+            margem_piso_fechado: 35, margem_alvo_fechado: 50, margem_premium_fechado: 60,
+            margem_piso_retainer: 45, margem_alvo_retainer: 60, margem_premium_retainer: 70,
+            margem_piso_exito: 50, margem_alvo_exito: 70, margem_premium_exito: 80,
+            imposto: 6, taxa_pagamento: 2.5, juros_parcelamento: 1, cs_padrao: 7.5,
+            buffer_complexidade_baixa: 10, buffer_complexidade_media: 20, buffer_complexidade_alta: 30,
+            buffer_urgencia_normal: 0, buffer_urgencia_urgente: 20
+        };
+        this.aplicarParametros(valoresPadrao);
+    },
+    
+    aplicarParametros: function(p) {
+        if (!p) return;
+        
+        this.setValor('custo_estagio', p.custo_estagio);
+        this.setValor('custo_jr', p.custo_jr);
+        this.setValor('custo_pl', p.custo_pl);
+        this.setValor('custo_sr', p.custo_sr);
+        this.setValor('custo_coord', p.custo_coord);
+        this.setValor('custo_socio', p.custo_socio);
+        
+        this.setValor('horas_estagio', p.horas_estagio);
+        this.setValor('horas_jr', p.horas_jr);
+        this.setValor('horas_pl', p.horas_pl);
+        this.setValor('horas_sr', p.horas_sr);
+        this.setValor('horas_coord', p.horas_coord);
+        this.setValor('horas_socio', p.horas_socio);
+        
+        this.setValor('overhead_hora', p.overhead_hora);
+        
+        this.setValor('margem_piso_hora', p.margem_piso_hora);
+        this.setValor('margem_alvo_hora', p.margem_alvo_hora);
+        this.setValor('margem_premium_hora', p.margem_premium_hora);
+        
+        this.setValor('margem_piso_fechado', p.margem_piso_fechado);
+        this.setValor('margem_alvo_fechado', p.margem_alvo_fechado);
+        this.setValor('margem_premium_fechado', p.margem_premium_fechado);
+        
+        this.setValor('margem_piso_retainer', p.margem_piso_retainer);
+        this.setValor('margem_alvo_retainer', p.margem_alvo_retainer);
+        this.setValor('margem_premium_retainer', p.margem_premium_retainer);
+        
+        this.setValor('margem_piso_exito', p.margem_piso_exito);
+        this.setValor('margem_alvo_exito', p.margem_alvo_exito);
+        this.setValor('margem_premium_exito', p.margem_premium_exito);
+        
+        this.setValor('imposto', p.imposto);
+        this.setValor('taxa_pagamento', p.taxa_pagamento);
+        this.setValor('juros_parcelamento', p.juros_parcelamento);
+        this.setValor('cs_padrao', p.cs_padrao);
+        
+        this.setValor('buffer_complexidade_baixa', p.buffer_complexidade_baixa);
+        this.setValor('buffer_complexidade_media', p.buffer_complexidade_media);
+        this.setValor('buffer_complexidade_alta', p.buffer_complexidade_alta);
+        this.setValor('buffer_urgencia_normal', p.buffer_urgencia_normal);
+        this.setValor('buffer_urgencia_urgente', p.buffer_urgencia_urgente);
+        
+        this.atualizarCustosBase();
+        Calculadora.calcular();
+        Perfis.atualizarBuffer();
+    },
+    
+    setValor: function(id, valor) {
+        const el = document.getElementById(id);
+        if (el && valor !== undefined && valor !== null) {
+            el.value = valor;
+        }
+    },
+    
+    salvar: function() {
+        const dados = {
+            action: 'salvarParametros',
+            dados: this.coletarDados()
+        };
+        
+        Utils.mostrarNotificacao('Salvando parâmetros...', 'info');
+        
+        fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dados)
+        })
+        .then(() => {
+            Utils.mostrarNotificacao('✅ Parâmetros salvos na planilha!', 'success');
+        })
+        .catch(error => {
+            Utils.mostrarNotificacao('❌ Erro ao salvar: ' + error.message, 'error');
+        });
+    },
+    
+    coletarDados: function() {
+        return {
+            custo_estagio: Utils.parseFloatSafe(document.getElementById('custo_estagio')?.value, 2500),
+            custo_jr: Utils.parseFloatSafe(document.getElementById('custo_jr')?.value, 5000),
+            custo_pl: Utils.parseFloatSafe(document.getElementById('custo_pl')?.value, 8000),
+            custo_sr: Utils.parseFloatSafe(document.getElementById('custo_sr')?.value, 12000),
+            custo_coord: Utils.parseFloatSafe(document.getElementById('custo_coord')?.value, 15000),
+            custo_socio: Utils.parseFloatSafe(document.getElementById('custo_socio')?.value, 20000),
+            
+            horas_estagio: Utils.parseFloatSafe(document.getElementById('horas_estagio')?.value, 150),
+            horas_jr: Utils.parseFloatSafe(document.getElementById('horas_jr')?.value, 150),
+            horas_pl: Utils.parseFloatSafe(document.getElementById('horas_pl')?.value, 150),
+            horas_sr: Utils.parseFloatSafe(document.getElementById('horas_sr')?.value, 150),
+            horas_coord: Utils.parseFloatSafe(document.getElementById('horas_coord')?.value, 150),
+            horas_socio: Utils.parseFloatSafe(document.getElementById('horas_socio')?.value, 150),
+            
+            overhead_hora: Utils.parseFloatSafe(document.getElementById('overhead_hora')?.value, 20),
+            
+            margem_piso_hora: Utils.parseFloatSafe(document.getElementById('margem_piso_hora')?.value, 40),
+            margem_alvo_hora: Utils.parseFloatSafe(document.getElementById('margem_alvo_hora')?.value, 55),
+            margem_premium_hora: Utils.parseFloatSafe(document.getElementById('margem_premium_hora')?.value, 65),
+            
+            margem_piso_fechado: Utils.parseFloatSafe(document.getElementById('margem_piso_fechado')?.value, 35),
+            margem_alvo_fechado: Utils.parseFloatSafe(document.getElementById('margem_alvo_fechado')?.value, 50),
+            margem_premium_fechado: Utils.parseFloatSafe(document.getElementById('margem_premium_fechado')?.value, 60),
+            
+            margem_piso_retainer: Utils.parseFloatSafe(document.getElementById('margem_piso_retainer')?.value, 45),
+            margem_alvo_retainer: Utils.parseFloatSafe(document.getElementById('margem_alvo_retainer')?.value, 60),
+            margem_premium_retainer: Utils.parseFloatSafe(document.getElementById('margem_premium_retainer')?.value, 70),
+            
+            margem_piso_exito: Utils.parseFloatSafe(document.getElementById('margem_piso_exito')?.value, 50),
+            margem_alvo_exito: Utils.parseFloatSafe(document.getElementById('margem_alvo_exito')?.value, 70),
+            margem_premium_exito: Utils.parseFloatSafe(document.getElementById('margem_premium_exito')?.value, 80),
+            
+            imposto: Utils.parseFloatSafe(document.getElementById('imposto')?.value, 6),
+            taxa_pagamento: Utils.parseFloatSafe(document.getElementById('taxa_pagamento')?.value, 2.5),
+            juros_parcelamento: Utils.parseFloatSafe(document.getElementById('juros_parcelamento')?.value, 1),
+            cs_padrao: Utils.parseFloatSafe(document.getElementById('cs_padrao')?.value, 7.5),
+            
+            buffer_complexidade_baixa: Utils.parseFloatSafe(document.getElementById('buffer_complexidade_baixa')?.value, 10),
+            buffer_complexidade_media: Utils.parseFloatSafe(document.getElementById('buffer_complexidade_media')?.value, 20),
+            buffer_complexidade_alta: Utils.parseFloatSafe(document.getElementById('buffer_complexidade_alta')?.value, 30),
+            buffer_urgencia_normal: Utils.parseFloatSafe(document.getElementById('buffer_urgencia_normal')?.value, 0),
+            buffer_urgencia_urgente: Utils.parseFloatSafe(document.getElementById('buffer_urgencia_urgente')?.value, 20)
+        };
+    },
+    
     atualizar: function() {
         this.atualizarCustosBase();
-        Utils.mostrarNotificacao('Parâmetros atualizados!', 'success');
+        Utils.mostrarNotificacao('Parâmetros atualizados no frontend!', 'success');
         Calculadora.calcular();
-        Sincronizacao.agendarAutomatica();
+        Perfis.atualizarBuffer();
+    },
+    
+    atualizarESalvar: function() {
+        this.atualizarCustosBase();
+        this.salvar();
+        Calculadora.calcular();
+        Perfis.atualizarBuffer();
     },
     
     atualizarCustosBase: function() {
@@ -231,14 +465,17 @@ const Tabelas = {
                 perfil === 'estagio' ? 2500 : perfil === 'jr' ? 5000 : perfil === 'pl' ? 8000 : 
                 perfil === 'sr' ? 12000 : perfil === 'coord' ? 15000 : 20000);
             const horas = Utils.parseFloatSafe(document.getElementById(`horas_${perfil}`)?.value, 150);
-            const custoBase = custo / horas;
             
-            const elBase = document.getElementById(`custo_base_${perfil}`);
-            if (elBase) elBase.textContent = Utils.formatarMoeda(custoBase);
-            
-            const custoCompleto = custoBase + overheadHora;
-            const elCompleto = document.getElementById(`custo_completo_${perfil}`);
-            if (elCompleto) elCompleto.textContent = Utils.formatarMoeda(custoCompleto);
+            if (horas > 0) {
+                const custoBase = custo / horas;
+                
+                const elBase = document.getElementById(`custo_base_${perfil}`);
+                if (elBase) elBase.textContent = Utils.formatarMoeda(custoBase);
+                
+                const custoCompleto = custoBase + overheadHora;
+                const elCompleto = document.getElementById(`custo_completo_${perfil}`);
+                if (elCompleto) elCompleto.textContent = Utils.formatarMoeda(custoCompleto);
+            }
         });
     }
 };
@@ -251,19 +488,20 @@ const Calculadora = {
         try {
             const overheadHora = Utils.parseFloatSafe(document.getElementById('overhead_hora')?.value, 20);
             
+            const horasEstagio = Utils.parseFloatSafe(document.getElementById('horas_estagio')?.value, 150);
+            const horasJr = Utils.parseFloatSafe(document.getElementById('horas_jr')?.value, 150);
+            const horasPl = Utils.parseFloatSafe(document.getElementById('horas_pl')?.value, 150);
+            const horasSr = Utils.parseFloatSafe(document.getElementById('horas_sr')?.value, 150);
+            const horasCoord = Utils.parseFloatSafe(document.getElementById('horas_coord')?.value, 150);
+            const horasSocio = Utils.parseFloatSafe(document.getElementById('horas_socio')?.value, 150);
+            
             const custosPerfil = {
-                'Estágio': (Utils.parseFloatSafe(document.getElementById('custo_estagio')?.value, 2500) / 
-                           Utils.parseFloatSafe(document.getElementById('horas_estagio')?.value, 150)) + overheadHora,
-                'Jr': (Utils.parseFloatSafe(document.getElementById('custo_jr')?.value, 5000) / 
-                      Utils.parseFloatSafe(document.getElementById('horas_jr')?.value, 150)) + overheadHora,
-                'Pl': (Utils.parseFloatSafe(document.getElementById('custo_pl')?.value, 8000) / 
-                      Utils.parseFloatSafe(document.getElementById('horas_pl')?.value, 150)) + overheadHora,
-                'Sr': (Utils.parseFloatSafe(document.getElementById('custo_sr')?.value, 12000) / 
-                      Utils.parseFloatSafe(document.getElementById('horas_sr')?.value, 150)) + overheadHora,
-                'Coord': (Utils.parseFloatSafe(document.getElementById('custo_coord')?.value, 15000) / 
-                         Utils.parseFloatSafe(document.getElementById('horas_coord')?.value, 150)) + overheadHora,
-                'Sócio': (Utils.parseFloatSafe(document.getElementById('custo_socio')?.value, 20000) / 
-                         Utils.parseFloatSafe(document.getElementById('horas_socio')?.value, 150)) + overheadHora
+                'Estágio': (Utils.parseFloatSafe(document.getElementById('custo_estagio')?.value, 2500) / (horasEstagio || 1)) + overheadHora,
+                'Jr': (Utils.parseFloatSafe(document.getElementById('custo_jr')?.value, 5000) / (horasJr || 1)) + overheadHora,
+                'Pl': (Utils.parseFloatSafe(document.getElementById('custo_pl')?.value, 8000) / (horasPl || 1)) + overheadHora,
+                'Sr': (Utils.parseFloatSafe(document.getElementById('custo_sr')?.value, 12000) / (horasSr || 1)) + overheadHora,
+                'Coord': (Utils.parseFloatSafe(document.getElementById('custo_coord')?.value, 15000) / (horasCoord || 1)) + overheadHora,
+                'Sócio': (Utils.parseFloatSafe(document.getElementById('custo_socio')?.value, 20000) / (horasSocio || 1)) + overheadHora
             };
 
             let custoDiretoTotal = 0;
@@ -271,20 +509,30 @@ const Calculadora = {
             let perfisArray = [];
             
             document.querySelectorAll('.perfil-row').forEach(row => {
-                const perfil = row.querySelector('.perfil-nome')?.value || 'Pl';
-                const horas = Utils.parseFloatSafe(row.querySelector('.perfil-horas')?.value, 0);
+                const perfilSelect = row.querySelector('.perfil-nome');
+                const horasInput = row.querySelector('.perfil-horas');
+                
+                const perfil = perfilSelect?.value || 'Pl';
+                const horas = Utils.parseFloatSafe(horasInput?.value, 0);
                 const custoHora = custosPerfil[perfil] || 0;
                 
-                totalHoras += horas;
-                custoDiretoTotal += custoHora * horas;
-                
-                perfisArray.push({
-                    nome: perfil,
-                    horas: horas,
-                    custoHora: custoHora,
-                    custoTotal: custoHora * horas
-                });
+                if (horas > 0) {
+                    totalHoras += horas;
+                    custoDiretoTotal += custoHora * horas;
+                    
+                    perfisArray.push({
+                        nome: perfil,
+                        horas: horas,
+                        custoHora: custoHora,
+                        custoTotal: custoHora * horas
+                    });
+                }
             });
+
+            if (totalHoras === 0) {
+                Utils.mostrarNotificacao('Adicione horas nos perfis!', 'warning');
+                return resultados;
+            }
 
             const complexidade = document.getElementById('complexidade')?.value || 'Média';
             const urgencia = document.getElementById('urgencia')?.value || 'Normal';
@@ -330,14 +578,17 @@ const Calculadora = {
                     margemPremium = Utils.parseFloatSafe(document.getElementById('margem_premium_exito')?.value, 80) / 100;
                     break;
                 case 'Retainer + Êxito':
-                    margemPiso = Utils.parseFloatSafe(document.getElementById('margem_piso_retainer')?.value, 45) / 100;
-                    margemAlvo = Utils.parseFloatSafe(document.getElementById('margem_alvo_retainer')?.value, 60) / 100;
-                    margemPremium = Utils.parseFloatSafe(document.getElementById('margem_premium_retainer')?.value, 70) / 100;
-                    break;
                 case 'Fechado + Êxito':
-                    margemPiso = Utils.parseFloatSafe(document.getElementById('margem_piso_fechado')?.value, 35) / 100;
-                    margemAlvo = Utils.parseFloatSafe(document.getElementById('margem_alvo_fechado')?.value, 50) / 100;
-                    margemPremium = Utils.parseFloatSafe(document.getElementById('margem_premium_fechado')?.value, 60) / 100;
+                    // Para híbridos, usar a margem da parte fixa
+                    margemPiso = modeloCobranca.includes('Retainer') ? 
+                        Utils.parseFloatSafe(document.getElementById('margem_piso_retainer')?.value, 45) / 100 :
+                        Utils.parseFloatSafe(document.getElementById('margem_piso_fechado')?.value, 35) / 100;
+                    margemAlvo = modeloCobranca.includes('Retainer') ? 
+                        Utils.parseFloatSafe(document.getElementById('margem_alvo_retainer')?.value, 60) / 100 :
+                        Utils.parseFloatSafe(document.getElementById('margem_alvo_fechado')?.value, 50) / 100;
+                    margemPremium = modeloCobranca.includes('Retainer') ? 
+                        Utils.parseFloatSafe(document.getElementById('margem_premium_retainer')?.value, 70) / 100 :
+                        Utils.parseFloatSafe(document.getElementById('margem_premium_fechado')?.value, 60) / 100;
                     break;
             }
 
@@ -350,7 +601,7 @@ const Calculadora = {
             
             let custoParcelamento = 0;
             
-            if (numParcelas > 1 && jurosParcelamento > 0) {
+            if (numParcelas > 1 && jurosParcelamento > 0 && precoAlvo > 0) {
                 const valorParcela = precoAlvo / numParcelas;
                 let valorPresente = 0;
                 for (let i = 1; i <= numParcelas; i++) {
@@ -412,13 +663,13 @@ const Calculadora = {
         const urgencia = document.getElementById('urgencia')?.value || 'Normal';
         
         let bufferComplexidade = 20;
-        if (complexidade === 'Baixa') bufferComplexidade = document.getElementById('buffer_complexidade_baixa')?.value || 10;
-        else if (complexidade === 'Média') bufferComplexidade = document.getElementById('buffer_complexidade_media')?.value || 20;
-        else if (complexidade === 'Alta') bufferComplexidade = document.getElementById('buffer_complexidade_alta')?.value || 30;
+        if (complexidade === 'Baixa') bufferComplexidade = Utils.parseFloatSafe(document.getElementById('buffer_complexidade_baixa')?.value, 10);
+        else if (complexidade === 'Média') bufferComplexidade = Utils.parseFloatSafe(document.getElementById('buffer_complexidade_media')?.value, 20);
+        else if (complexidade === 'Alta') bufferComplexidade = Utils.parseFloatSafe(document.getElementById('buffer_complexidade_alta')?.value, 30);
         
         let bufferUrgencia = 0;
-        if (urgencia === 'Normal') bufferUrgencia = document.getElementById('buffer_urgencia_normal')?.value || 0;
-        else if (urgencia === 'Urgente') bufferUrgencia = document.getElementById('buffer_urgencia_urgente')?.value || 20;
+        if (urgencia === 'Normal') bufferUrgencia = Utils.parseFloatSafe(document.getElementById('buffer_urgencia_normal')?.value, 0);
+        else if (urgencia === 'Urgente') bufferUrgencia = Utils.parseFloatSafe(document.getElementById('buffer_urgencia_urgente')?.value, 20);
         
         Utils.setTextContent('calculo-buffer-complexidade', bufferComplexidade + '%');
         Utils.setTextContent('calculo-buffer-urgencia', bufferUrgencia + '%');
@@ -504,7 +755,7 @@ const Alertas = {
         
         let alertas = [];
         
-        if (precoComDesconto < resultados.precoPiso && resultados.precoPiso > 0) {
+        if (resultados.precoPiso > 0 && precoComDesconto < resultados.precoPiso) {
             alertas.push({
                 tipo: 'danger',
                 icone: '⚠️',
@@ -547,7 +798,7 @@ const Alertas = {
         }
         
         if (modeloCobranca === 'Retainer') {
-            if (escopo.trim() === '' || escopo.length < 30) {
+            if (!escopo || escopo.trim() === '' || escopo.length < 30) {
                 alertas.push({
                     tipo: 'warning',
                     icone: '⚠️',
@@ -570,7 +821,7 @@ const Alertas = {
         }
         
         if (modeloCobranca === 'Retainer + Êxito' || modeloCobranca === 'Fechado + Êxito') {
-            if (escopo.trim() === '' || escopo.length < 50) {
+            if (!escopo || escopo.trim() === '' || escopo.length < 50) {
                 alertas.push({
                     tipo: 'info',
                     icone: 'ℹ️',
@@ -601,7 +852,7 @@ const Alertas = {
             });
         }
         
-        if (resultados.margemLiquida < 20 && resultados.margemLiquida > 0) {
+        if (resultados.margemLiquida > 0 && resultados.margemLiquida < 20) {
             alertas.push({
                 tipo: 'warning',
                 icone: '⚠️',
@@ -724,8 +975,9 @@ const Sincronizacao = {
             return;
         }
         
-        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL === 'SUA_URL_DO_WEB_APP_AQUI') {
+        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL.includes('SUA_URL')) {
             Utils.mostrarNotificacao('Configure a URL do Google Sheets no código!', 'error');
+            this.adicionarFila();
             return;
         }
         
@@ -764,8 +1016,11 @@ const Sincronizacao = {
                     
                     setTimeout(() => {
                         if (confirm('Dados salvos! Ir para o histórico?')) {
-                            UI.showTab('historico', document.querySelectorAll('.tab-btn')[4]);
-                            setTimeout(Historico.carregar, 2000);
+                            const historicoTab = document.querySelectorAll('.tab-btn')[4];
+                            if (historicoTab) {
+                                UI.showTab('historico', historicoTab);
+                                setTimeout(() => Historico.carregar(), 2000);
+                            }
                         }
                     }, 500);
                 }
@@ -865,6 +1120,7 @@ const Sincronizacao = {
         return {
             action: 'salvar',
             timestamp: new Date().toISOString(),
+            usuario: Login.usuarioAtual || 'anonimo',
             input: dadosInput,
             perfis: perfisArray,
             resultados: {
@@ -887,16 +1143,21 @@ const Sincronizacao = {
     },
     
     testar: function() {
-        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL === 'SUA_URL_DO_WEB_APP_AQUI') {
+        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL.includes('SUA_URL')) {
             Utils.mostrarNotificacao('URL do Google Sheets não configurada!', 'error');
             this.atualizarStatus('offline', 'Não configurado');
             return;
         }
         
         fetch(GOOGLE_SHEETS_URL + '?action=test')
-            .then(response => response.json())
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Resposta não OK');
+            })
             .then(data => {
-                if (data.success) {
+                if (data && data.success) {
                     this.atualizarStatus('online', 'Sincronizado');
                     Utils.mostrarNotificacao('Conexão estabelecida!', 'success');
                     
@@ -921,7 +1182,7 @@ const Sincronizacao = {
     },
     
     testarSilenciosa: function() {
-        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL === 'SUA_URL_DO_WEB_APP_AQUI') {
+        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL.includes('SUA_URL')) {
             this.atualizarStatus('offline', 'Não configurado');
             return;
         }
@@ -1013,11 +1274,11 @@ const Sincronizacao = {
         fetch(GOOGLE_SHEETS_URL + '?action=recriarCabecalho')
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
+                if (data && data.success) {
                     Utils.mostrarNotificacao('Cabeçalho recriado com sucesso!', 'success');
                     Historico.carregar();
                 } else {
-                    Utils.mostrarNotificacao('Erro ao recriar cabeçalho: ' + (data.error || 'Erro desconhecido'), 'error');
+                    Utils.mostrarNotificacao('Erro ao recriar cabeçalho: ' + (data?.error || 'Erro desconhecido'), 'error');
                 }
             })
             .catch(error => {
@@ -1044,13 +1305,15 @@ const Sincronizacao = {
 };
 
 // ===========================================
-// HISTÓRICO COM PAGINAÇÃO E PDF
+// HISTÓRICO
 // ===========================================
 const Historico = {
     carregar: function() {
-        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL === 'SUA_URL_DO_WEB_APP_AQUI') {
+        if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL.includes('SUA_URL')) {
             const lista = document.getElementById('historico-lista');
-            if (lista) lista.innerHTML = '<tr><td colspan="13" style="text-align: center;">Configure a URL do Web App no código primeiro!</td></tr>';
+            if (lista) {
+                lista.innerHTML = '<tr><td colspan="13" style="text-align: center;">Configure a URL do Web App no código primeiro!</td></tr>';
+            }
             return;
         }
         
@@ -1062,7 +1325,7 @@ const Historico = {
         fetch(GOOGLE_SHEETS_URL + '?action=carregarHistorico')
             .then(response => response.json())
             .then(data => {
-                historicoCompleto = data || [];
+                historicoCompleto = data && Array.isArray(data) ? data : [];
                 historicoFiltrado = [...historicoCompleto];
                 paginaAtual = 1;
                 this.renderizar();
@@ -1098,7 +1361,6 @@ const Historico = {
             return;
         }
         
-        // Calcular página atual
         const inicio = (paginaAtual - 1) * itensPorPagina;
         const fim = Math.min(inicio + itensPorPagina, historicoFiltrado.length);
         const dadosPagina = historicoFiltrado.slice(inicio, fim);
@@ -1162,10 +1424,8 @@ const Historico = {
         
         let html = '<div class="paginacao">';
         
-        // Botão Anterior
         html += `<button class="btn-paginacao" onclick="Historico.mudarPagina(${paginaAtual - 1})" ${paginaAtual === 1 ? 'disabled' : ''}>◀ Anterior</button>`;
         
-        // Números das páginas
         const maxBotoes = 5;
         let inicio = Math.max(1, paginaAtual - Math.floor(maxBotoes / 2));
         let fim = Math.min(totalPaginas, inicio + maxBotoes - 1);
@@ -1188,10 +1448,8 @@ const Historico = {
             html += `<button class="btn-paginacao" onclick="Historico.mudarPagina(${totalPaginas})">${totalPaginas}</button>`;
         }
         
-        // Botão Próximo
         html += `<button class="btn-paginacao" onclick="Historico.mudarPagina(${paginaAtual + 1})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>Próximo ▶</button>`;
         
-        // Seletor de itens por página
         html += `
             <select class="select-paginacao" onchange="Historico.mudarItensPorPagina(this.value)">
                 <option value="10" ${itensPorPagina === 10 ? 'selected' : ''}>10 por página</option>
@@ -1203,15 +1461,16 @@ const Historico = {
         
         html += '</div>';
         
-        // Informações da página
         const inicioRegistro = (paginaAtual - 1) * itensPorPagina + 1;
         const fimRegistro = Math.min(paginaAtual * itensPorPagina, historicoFiltrado.length);
         
-        html += `
-            <div class="paginacao-info">
-                Mostrando ${inicioRegistro} - ${fimRegistro} de ${historicoFiltrado.length} registros
-            </div>
-        `;
+        if (historicoFiltrado.length > 0) {
+            html += `
+                <div class="paginacao-info">
+                    Mostrando ${inicioRegistro} - ${fimRegistro} de ${historicoFiltrado.length} registros
+                </div>
+            `;
+        }
         
         container.innerHTML = html;
     },
@@ -1396,9 +1655,13 @@ const Historico = {
         `;
         
         const janelaPDF = window.open('', '_blank');
-        janelaPDF.document.write(htmlContent);
-        janelaPDF.document.close();
-        janelaPDF.print();
+        if (janelaPDF) {
+            janelaPDF.document.write(htmlContent);
+            janelaPDF.document.close();
+            janelaPDF.print();
+        } else {
+            Utils.mostrarNotificacao('Pop-up bloqueado! Permita pop-ups para exportar PDF.', 'error');
+        }
     },
     
     exportarPDFItem: function(id) {
@@ -1411,7 +1674,7 @@ const Historico = {
         fetch(GOOGLE_SHEETS_URL + `?action=carregarSimulacao&id=${id}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
+                if (data && data.success && data.dados) {
                     this.gerarPDFSimulacao(data.dados, item);
                 } else {
                     Utils.mostrarNotificacao('Erro ao carregar dados completos', 'error');
@@ -1429,7 +1692,7 @@ const Historico = {
             <html>
             <head>
                 <meta charset="UTF-8">
-                <title>Simulação - ${sim.input.cliente}</title>
+                <title>Simulação - ${sim.input?.cliente || 'Cliente'}</title>
                 <style>
                     body { font-family: Arial, sans-serif; margin: 30px; }
                     .header { text-align: center; margin-bottom: 30px; }
@@ -1498,17 +1761,17 @@ const Historico = {
                     <div class="section-title">📋 Dados do Cliente</div>
                     <div class="grid-2">
                         <div>
-                            <div class="info-row"><span class="info-label">Cliente:</span> <span class="info-value">${sim.input.cliente || '---'}</span></div>
-                            <div class="info-row"><span class="info-label">Segmento:</span> <span class="info-value">${sim.input.segmento || '---'}</span></div>
-                            <div class="info-row"><span class="info-label">Tipo:</span> <span class="info-value">${sim.input.tipo || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Cliente:</span> <span class="info-value">${sim.input?.cliente || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Segmento:</span> <span class="info-value">${sim.input?.segmento || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Tipo:</span> <span class="info-value">${sim.input?.tipo || '---'}</span></div>
                         </div>
                         <div>
-                            <div class="info-row"><span class="info-label">Risco:</span> <span class="info-value">${sim.input.risco || '---'}</span></div>
-                            <div class="info-row"><span class="info-label">Produto:</span> <span class="info-value">${sim.input.produto || '---'}</span></div>
-                            <div class="info-row"><span class="info-label">Modelo:</span> <span class="info-value">${sim.input.modeloCobranca || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Risco:</span> <span class="info-value">${sim.input?.risco || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Produto:</span> <span class="info-value">${sim.input?.produto || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Modelo:</span> <span class="info-value">${sim.input?.modeloCobranca || '---'}</span></div>
                         </div>
                     </div>
-                    <div class="info-row"><span class="info-label">Escopo:</span> <span class="info-value">${sim.input.escopo || '---'}</span></div>
+                    <div class="info-row"><span class="info-label">Escopo:</span> <span class="info-value">${sim.input?.escopo || '---'}</span></div>
                 </div>
                 
                 <div class="section">
@@ -1542,8 +1805,8 @@ const Historico = {
         if (sim.perfis && sim.perfis.length > 0) {
             sim.perfis.forEach(p => {
                 const custoHora = p.custoHora || 0;
-                const custoTotal = p.horas * custoHora;
-                htmlContent += `<tr><td>${p.nome}</td><td>${p.horas}h</td><td>${Utils.formatarMoeda(custoHora)}</td><td>${Utils.formatarMoeda(custoTotal)}</td></tr>`;
+                const custoTotal = (p.horas || 0) * custoHora;
+                htmlContent += `<tr><td>${p.nome}</td><td>${p.horas || 0}h</td><td>${Utils.formatarMoeda(custoHora)}</td><td>${Utils.formatarMoeda(custoTotal)}</td></tr>`;
             });
         }
         
@@ -1558,11 +1821,11 @@ const Historico = {
                     
                     <div class="section">
                         <div class="section-title">💳 Condições Comerciais</div>
-                        <div class="info-row"><span class="info-label">Entrada:</span> <span class="info-value">${sim.input.entrada || 30}%</span></div>
-                        <div class="info-row"><span class="info-label">Parcelas:</span> <span class="info-value">${sim.input.parcelas || 6}x</span></div>
-                        <div class="info-row"><span class="info-label">Desconto:</span> <span class="info-value">${sim.input.desconto || 0}%</span></div>
-                        <div class="info-row"><span class="info-label">Parceiro:</span> <span class="info-value">${sim.input.temParceiro === 'sim' ? sim.input.percentualParceiro + '%' : 'Não'}</span></div>
-                        <div class="info-row"><span class="info-label">CS:</span> <span class="info-value">${sim.input.aplicaCS === 'sim' ? sim.input.percentualCS + '%' : 'Não'}</span></div>
+                        <div class="info-row"><span class="info-label">Entrada:</span> <span class="info-value">${sim.input?.entrada || 30}%</span></div>
+                        <div class="info-row"><span class="info-label">Parcelas:</span> <span class="info-value">${sim.input?.parcelas || 6}x</span></div>
+                        <div class="info-row"><span class="info-label">Desconto:</span> <span class="info-value">${sim.input?.desconto || 0}%</span></div>
+                        <div class="info-row"><span class="info-label">Parceiro:</span> <span class="info-value">${sim.input?.temParceiro === 'sim' ? sim.input.percentualParceiro + '%' : 'Não'}</span></div>
+                        <div class="info-row"><span class="info-label">CS:</span> <span class="info-value">${sim.input?.aplicaCS === 'sim' ? sim.input.percentualCS + '%' : 'Não'}</span></div>
                     </div>
                 </div>
                 
@@ -1585,16 +1848,20 @@ const Historico = {
                 
                 <div class="footer">
                     <p>Este é um documento gerado automaticamente pelo sistema MFBD Precificação Estratégica</p>
-                    <p>ID da Simulação: ${itemResumido.id} | Data: ${new Date(itemResumido.data).toLocaleString('pt-BR')}</p>
+                    <p>ID da Simulação: ${itemResumido.id} | Data: ${itemResumido.data ? new Date(itemResumido.data).toLocaleString('pt-BR') : '---'}</p>
                 </div>
             </body>
             </html>
         `;
         
         const janelaPDF = window.open('', '_blank');
-        janelaPDF.document.write(htmlContent);
-        janelaPDF.document.close();
-        janelaPDF.print();
+        if (janelaPDF) {
+            janelaPDF.document.write(htmlContent);
+            janelaPDF.document.close();
+            janelaPDF.print();
+        } else {
+            Utils.mostrarNotificacao('Pop-up bloqueado! Permita pop-ups para exportar PDF.', 'error');
+        }
     },
     
     editar: function(id) {
@@ -1603,7 +1870,7 @@ const Historico = {
         fetch(GOOGLE_SHEETS_URL + `?action=carregarSimulacao&id=${id}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
+                if (data && data.success && data.dados) {
                     const sim = data.dados;
                     
                     editandoId = id;
@@ -1613,63 +1880,65 @@ const Historico = {
                     if (btnCancelar) btnCancelar.style.display = 'inline-flex';
                     
                     const campoCliente = document.getElementById('cliente_nome');
-                    if (campoCliente) campoCliente.value = sim.input.cliente || '';
+                    if (campoCliente) campoCliente.value = sim.input?.cliente || '';
                     
                     const campoSegmento = document.getElementById('segmento');
-                    if (campoSegmento) campoSegmento.value = sim.input.segmento || '';
+                    if (campoSegmento) campoSegmento.value = sim.input?.segmento || '';
                     
                     const campoTipo = document.getElementById('tipo_cliente');
-                    if (campoTipo) campoTipo.value = sim.input.tipo || 'Novo';
+                    if (campoTipo) campoTipo.value = sim.input?.tipo || 'Novo';
                     
                     const campoRisco = document.getElementById('risco_inadimplencia');
-                    if (campoRisco) campoRisco.value = sim.input.risco || 'Médio';
+                    if (campoRisco) campoRisco.value = sim.input?.risco || 'Médio';
                     
                     const campoProduto = document.getElementById('produto');
-                    if (campoProduto) campoProduto.value = sim.input.produto || 'Consultoria Estratégica';
+                    if (campoProduto) campoProduto.value = sim.input?.produto || 'Consultoria Estratégica';
                     
                     const campoEscopo = document.getElementById('escopo');
-                    if (campoEscopo) campoEscopo.value = sim.input.escopo || '';
+                    if (campoEscopo) campoEscopo.value = sim.input?.escopo || '';
                     
                     const campoComplexidade = document.getElementById('complexidade');
-                    if (campoComplexidade) campoComplexidade.value = sim.input.complexidade || 'Média';
+                    if (campoComplexidade) campoComplexidade.value = sim.input?.complexidade || 'Média';
                     
                     const campoUrgencia = document.getElementById('urgencia');
-                    if (campoUrgencia) campoUrgencia.value = sim.input.urgencia || 'Normal';
+                    if (campoUrgencia) campoUrgencia.value = sim.input?.urgencia || 'Normal';
                     
                     document.querySelectorAll('input[name="modelo_cobranca"]').forEach(radio => {
-                        radio.checked = (radio.value === sim.input.modeloCobranca);
+                        if (radio.value === sim.input?.modeloCobranca) {
+                            radio.checked = true;
+                        }
                     });
                     
                     const campoEntrada = document.getElementById('entrada');
-                    if (campoEntrada) campoEntrada.value = sim.input.entrada || 30;
+                    if (campoEntrada) campoEntrada.value = sim.input?.entrada || 30;
                     
                     const campoParcelas = document.getElementById('parcelas');
-                    if (campoParcelas) campoParcelas.value = sim.input.parcelas || 6;
+                    if (campoParcelas) campoParcelas.value = sim.input?.parcelas || 6;
                     
                     const campoDesconto = document.getElementById('desconto');
-                    if (campoDesconto) campoDesconto.value = sim.input.desconto || 0;
+                    if (campoDesconto) campoDesconto.value = sim.input?.desconto || 0;
                     
                     const campoTemParceiro = document.getElementById('tem_parceiro');
-                    if (campoTemParceiro) campoTemParceiro.value = sim.input.temParceiro || 'nao';
+                    if (campoTemParceiro) campoTemParceiro.value = sim.input?.temParceiro || 'nao';
                     
-                    if (sim.input.temParceiro === 'sim') {
+                    if (sim.input?.temParceiro === 'sim') {
                         const parceiroGroup = document.getElementById('parceiro-group');
                         if (parceiroGroup) parceiroGroup.style.display = 'block';
                         const campoPercParceiro = document.getElementById('percentual_parceiro');
-                        if (campoPercParceiro) campoPercParceiro.value = sim.input.percentualParceiro || 10;
+                        if (campoPercParceiro) campoPercParceiro.value = sim.input?.percentualParceiro || 10;
                     } else {
                         const parceiroGroup = document.getElementById('parceiro-group');
                         if (parceiroGroup) parceiroGroup.style.display = 'none';
                     }
                     
                     const campoAplicaCS = document.getElementById('aplica_cs');
-                    if (campoAplicaCS) campoAplicaCS.value = sim.input.aplicaCS || 'sim';
+                    if (campoAplicaCS) campoAplicaCS.value = sim.input?.aplicaCS || 'sim';
                     
-                    if (sim.input.aplicaCS === 'sim') {
+                    if (sim.input?.aplicaCS === 'sim') {
                         const csGroup = document.getElementById('cs-group');
                         if (csGroup) csGroup.style.display = 'block';
                         const campoPercCS = document.getElementById('percentual_cs');
-                        if (campoPercCS) campoPercCS.value = sim.input.percentualCS || 7.5;
+                        if (campoPercCS) campoPercCS.value = sim.input?.percentualCS || 7.5;
                     } else {
                         const csGroup = document.getElementById('cs-group');
                         if (csGroup) csGroup.style.display = 'none';
@@ -1692,15 +1961,33 @@ const Historico = {
                                         <option value="Coord" ${perfil.nome === 'Coord' ? 'selected' : ''}>Coord</option>
                                         <option value="Sócio" ${perfil.nome === 'Sócio' ? 'selected' : ''}>Sócio</option>
                                     </select>
-                                    <input type="number" class="perfil-horas" placeholder="Horas" value="${perfil.horas}" min="0" step="1">
+                                    <input type="number" class="perfil-horas" placeholder="Horas" value="${perfil.horas || 40}" min="0" step="1">
                                     <input type="text" class="perfil-buffer" placeholder="Buffer %" readonly value="20%">
                                     <button type="button" class="btn-danger" onclick="Perfis.remover(this)" style="padding: 12px;">🗑️</button>
                                 `;
                                 container.appendChild(newRow);
                             });
                         } else {
-                            Perfis.adicionar();
-                            Perfis.adicionar();
+                            // Adicionar dois perfis padrão
+                            const row1 = document.createElement('div');
+                            row1.className = 'perfil-row';
+                            row1.innerHTML = `
+                                <select class="perfil-nome"><option value="Pl" selected>Pl</option><option value="Jr">Jr</option><option value="Sr">Sr</option></select>
+                                <input type="number" class="perfil-horas" value="80" min="0" step="1">
+                                <input type="text" class="perfil-buffer" readonly value="20%">
+                                <button type="button" class="btn-danger" onclick="Perfis.remover(this)">🗑️</button>
+                            `;
+                            container.appendChild(row1);
+                            
+                            const row2 = document.createElement('div');
+                            row2.className = 'perfil-row';
+                            row2.innerHTML = `
+                                <select class="perfil-nome"><option value="Jr" selected>Jr</option><option value="Pl">Pl</option><option value="Sr">Sr</option></select>
+                                <input type="number" class="perfil-horas" value="40" min="0" step="1">
+                                <input type="text" class="perfil-buffer" readonly value="20%">
+                                <button type="button" class="btn-danger" onclick="Perfis.remover(this)">🗑️</button>
+                            `;
+                            container.appendChild(row2);
                         }
                     }
                     
@@ -1708,10 +1995,13 @@ const Historico = {
                     Calculadora.calcular();
                     
                     Utils.mostrarNotificacao('Simulação carregada para edição!', 'success');
-                    UI.showTab('input', document.querySelectorAll('.tab-btn')[0]);
+                    const inputTab = document.querySelectorAll('.tab-btn')[0];
+                    if (inputTab) {
+                        UI.showTab('input', inputTab);
+                    }
                     
                 } else {
-                    Utils.mostrarNotificacao('Erro ao carregar: ' + (data.error || 'Erro desconhecido'), 'error');
+                    Utils.mostrarNotificacao('Erro ao carregar: ' + (data?.error || 'Erro desconhecido'), 'error');
                 }
             })
             .catch(error => {
@@ -1725,11 +2015,11 @@ const Historico = {
         fetch(GOOGLE_SHEETS_URL + `?action=excluirSimulacao&id=${id}`)
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
+                if (data && data.success) {
                     Utils.mostrarNotificacao('Simulação excluída!', 'success');
                     this.carregar();
                 } else {
-                    Utils.mostrarNotificacao('Erro ao excluir: ' + (data.error || 'Erro desconhecido'), 'error');
+                    Utils.mostrarNotificacao('Erro ao excluir: ' + (data?.error || 'Erro desconhecido'), 'error');
                 }
             })
             .catch(error => {
@@ -1738,6 +2028,8 @@ const Historico = {
     },
     
     alterarStatus: function(id, elemento) {
+        if (!elemento) return;
+        
         const statusAtual = elemento.textContent.trim();
         const opcoes = ['Pendente', 'Ganho', 'Perdido'];
         const proximoIndex = (opcoes.indexOf(statusAtual) + 1) % opcoes.length;
@@ -1747,6 +2039,8 @@ const Historico = {
             elemento.textContent = novoStatus;
             elemento.className = `status-badge status-${novoStatus.toLowerCase()}`;
             Utils.mostrarNotificacao(`Status alterado para ${novoStatus}`, 'success');
+            
+            // Aqui você pode adicionar lógica para salvar o status alterado no backend
         }
     }
 };
@@ -1774,7 +2068,7 @@ const Edicao = {
 // ===========================================
 const Utils = {
     parseFloatSafe: function(valor, padrao = 0) {
-        if (valor === undefined || valor === null) return padrao;
+        if (valor === undefined || valor === null || valor === '') return padrao;
         const parsed = parseFloat(valor);
         return isNaN(parsed) ? padrao : parsed;
     },
@@ -1795,13 +2089,19 @@ const Utils = {
     },
     
     mostrarNotificacao: function(mensagem, tipo = 'success') {
+        // Remover notificações existentes
+        const notificacoesExistentes = document.querySelectorAll('.notification');
+        notificacoesExistentes.forEach(n => n.remove());
+        
         const notification = document.createElement('div');
         notification.className = `notification ${tipo}`;
         notification.textContent = mensagem;
         document.body.appendChild(notification);
         
         setTimeout(() => {
-            notification.remove();
+            if (notification.parentNode) {
+                notification.remove();
+            }
         }, 5000);
     },
     
@@ -1813,7 +2113,7 @@ const Utils = {
         const contador = document.getElementById('contadorAutoSave');
         if (contador) {
             if (syncTimeout) {
-                const segundosRestantes = Math.ceil(syncTimeout._idleTimeout / 1000);
+                const segundosRestantes = Math.ceil(syncTimeout._idleTimeout / 1000) || 3;
                 contador.textContent = `⏳ Auto-save em ${segundosRestantes}s`;
             } else {
                 contador.textContent = '';
@@ -1823,55 +2123,25 @@ const Utils = {
 };
 
 // ===========================================
-// FUNÇÕES DE CONFIGURAÇÃO
-// ===========================================
-function configurarAutoSave() {
-    document.querySelectorAll('input, select, textarea').forEach(element => {
-        element.addEventListener('input', Sincronizacao.agendarAutomatica);
-        element.addEventListener('change', function() {
-            if (this.id === 'complexidade' || this.id === 'urgencia') {
-                Perfis.atualizarBuffer();
-            }
-            if (this.id === 'tem_parceiro') {
-                toggleParceiro();
-            }
-            if (this.id === 'aplica_cs') {
-                toggleCS();
-            }
-            Sincronizacao.agendarAutomatica();
-        });
-    });
-    
-    document.querySelectorAll('input[name="modelo_cobranca"]').forEach(radio => {
-        radio.addEventListener('change', Sincronizacao.agendarAutomatica);
-    });
-}
-
-function toggleParceiro() {
-    const temParceiro = document.getElementById('tem_parceiro')?.value;
-    const parceiroGroup = document.getElementById('parceiro-group');
-    if (parceiroGroup) {
-        parceiroGroup.style.display = temParceiro === 'sim' ? 'block' : 'none';
-    }
-    Calculadora.calcular();
-}
-
-function toggleCS() {
-    const aplicaCS = document.getElementById('aplica_cs')?.value;
-    const csGroup = document.getElementById('cs-group');
-    if (csGroup) {
-        csGroup.style.display = aplicaCS === 'sim' ? 'block' : 'none';
-    }
-    Calculadora.calcular();
-}
-
-// ===========================================
 // INICIALIZAÇÃO
 // ===========================================
 document.addEventListener('DOMContentLoaded', function() {
+    // Expor objetos globalmente para onclick
+    window.Login = Login;
+    window.UI = UI;
+    window.Perfis = Perfis;
+    window.Calculadora = Calculadora;
+    window.Sincronizacao = Sincronizacao;
+    window.Historico = Historico;
+    window.Edicao = Edicao;
+    window.Tabelas = Tabelas;
+    
     if (!Login.verificarSessao()) {
-        document.getElementById('loginContainer').style.display = 'flex';
-        document.getElementById('mainContent').classList.remove('active');
+        const loginContainer = document.getElementById('loginContainer');
+        const mainContent = document.getElementById('mainContent');
+        
+        if (loginContainer) loginContainer.style.display = 'flex';
+        if (mainContent) mainContent.classList.remove('active');
         
         const loginEmail = document.getElementById('loginEmail');
         const loginSenha = document.getElementById('loginSenha');

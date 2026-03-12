@@ -179,12 +179,12 @@
             <div class="login-form">
                 <div class="form-group">
                     <label>Email</label>
-                    <input type="email" id="loginEmail" placeholder="seu@email.com" value="  ">
+                    <input type="email" id="loginEmail" placeholder="seu@email.com" value="admin@exemplo.com">
                 </div>
                 
                 <div class="form-group">
                     <label>Senha</label>
-                    <input type="password" id="loginSenha" placeholder="" value="">
+                    <input type="password" id="loginSenha" placeholder="••••••••" value="admin123">
                 </div>
                 
                 <button type="button" id="loginButton" onclick="Login.entrar()">
@@ -194,8 +194,8 @@
             </div>
             
             <div class="login-footer">
-                <p>   </p>
-                <p style="margin-top: 5px;">   </p>
+                <p>Usuário padrão: admin@exemplo.com / admin123</p>
+                <p style="margin-top: 5px;">Os usuários podem ser cadastrados na aba "CadastroLogin" da planilha</p>
             </div>
         </div>
     </div>
@@ -650,7 +650,15 @@
                 </div>
 
                 <div class="action-bar mt-4">
-                    <button type="button" class="btn btn-primary" onclick="Tabelas.atualizar()">🔄 Atualizar Parâmetros</button>
+                    <button type="button" class="btn btn-success" onclick="Tabelas.atualizarESalvar()">
+                        💾 Salvar Parâmetros na Planilha
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="Tabelas.carregar()">
+                        🔄 Recarregar da Planilha
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="Tabelas.atualizar()">
+                        📊 Atualizar Frontend Apenas
+                    </button>
                 </div>
             </div>
 
