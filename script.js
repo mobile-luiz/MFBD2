@@ -30,8 +30,11 @@ let syncTimeout = null;
 let syncQueue = [];
 let isOnline = false;
 let historicoCompleto = [];
+let historicoFiltrado = [];
 let salvando = false;
 let ultimoSalvamento = 0;
+let paginaAtual = 1;
+let itensPorPagina = 20;
 
 // ===========================================
 // LOGIN
@@ -53,13 +56,11 @@ const Login = {
             return;
         }
         
-        // Mostrar loading
         loginButton.disabled = true;
         buttonText.style.display = 'none';
         buttonLoading.style.display = 'inline-block';
         errorDiv.classList.remove('active');
         
-        // Fazer requisição de login
         fetch(GOOGLE_SHEETS_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -71,35 +72,21 @@ const Login = {
             })
         })
         .then(() => {
-            // Com no-cors não podemos ler a resposta
-            // Vamos assumir sucesso e testar a conexão depois
             this.usuarioAtual = email;
             document.getElementById('usuarioLogado').textContent = email;
-            
-            // Salvar na sessão
             localStorage.setItem('usuarioLogado', email);
-            
-            // Esconder login e mostrar conteúdo
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('mainContent').classList.add('active');
-            
-            // Configurar tudo após login
             this.inicializarAposLogin();
-            
             Utils.mostrarNotificacao(`Bem-vindo, ${email}!`, 'success');
         })
         .catch(error => {
-            console.warn('Erro no login (pode ser falso positivo devido no-cors):', error);
-            
-            // Mesmo com erro, permitir acesso para não bloquear usuário
+            console.warn('Erro no login:', error);
             this.usuarioAtual = email;
             document.getElementById('usuarioLogado').textContent = email;
-            
             localStorage.setItem('usuarioLogado', email);
-            
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('mainContent').classList.add('active');
-            
             this.inicializarAposLogin();
         })
         .finally(() => {
@@ -132,7 +119,6 @@ const Login = {
     },
     
     inicializarAposLogin: function() {
-        // Configurar auto-save e outras funcionalidades
         configurarAutoSave();
         Perfis.atualizarBuffer();
         Tabelas.atualizarCustosBase();
@@ -149,7 +135,7 @@ const Login = {
 };
 
 // ===========================================
-// NAMESPACES PARA ORGANIZAÇÃO
+// UI
 // ===========================================
 const UI = {
     showTab: function(tabName, element) {
@@ -163,6 +149,9 @@ const UI = {
     }
 };
 
+// ===========================================
+// PERFIS
+// ===========================================
 const Perfis = {
     adicionar: function() {
         const container = document.getElementById('perfis-container');
@@ -222,6 +211,9 @@ const Perfis = {
     }
 };
 
+// ===========================================
+// TABELAS
+// ===========================================
 const Tabelas = {
     atualizar: function() {
         this.atualizarCustosBase();
@@ -251,12 +243,14 @@ const Tabelas = {
     }
 };
 
+// ===========================================
+// CALCULADORA
+// ===========================================
 const Calculadora = {
     calcular: function() {
         try {
             const overheadHora = Utils.parseFloatSafe(document.getElementById('overhead_hora')?.value, 20);
             
-            // Calcular custo por perfil
             const custosPerfil = {
                 'Estágio': (Utils.parseFloatSafe(document.getElementById('custo_estagio')?.value, 2500) / 
                            Utils.parseFloatSafe(document.getElementById('horas_estagio')?.value, 150)) + overheadHora,
@@ -292,7 +286,6 @@ const Calculadora = {
                 });
             });
 
-            // Aplicar buffers
             const complexidade = document.getElementById('complexidade')?.value || 'Média';
             const urgencia = document.getElementById('urgencia')?.value || 'Normal';
             
@@ -311,7 +304,6 @@ const Calculadora = {
             const custoOverheadTotal = overheadHora * (totalHoras * (1 + bufferTotal));
             const custoTotal = custoDiretoBuffer + custoOverheadTotal;
 
-            // Determinar margens baseado no modelo de cobrança
             const modeloCobranca = document.querySelector('input[name="modelo_cobranca"]:checked')?.value || 'Hora';
             
             let margemPiso = 0.4, margemAlvo = 0.55, margemPremium = 0.65;
@@ -337,14 +329,22 @@ const Calculadora = {
                     margemAlvo = Utils.parseFloatSafe(document.getElementById('margem_alvo_exito')?.value, 70) / 100;
                     margemPremium = Utils.parseFloatSafe(document.getElementById('margem_premium_exito')?.value, 80) / 100;
                     break;
+                case 'Retainer + Êxito':
+                    margemPiso = Utils.parseFloatSafe(document.getElementById('margem_piso_retainer')?.value, 45) / 100;
+                    margemAlvo = Utils.parseFloatSafe(document.getElementById('margem_alvo_retainer')?.value, 60) / 100;
+                    margemPremium = Utils.parseFloatSafe(document.getElementById('margem_premium_retainer')?.value, 70) / 100;
+                    break;
+                case 'Fechado + Êxito':
+                    margemPiso = Utils.parseFloatSafe(document.getElementById('margem_piso_fechado')?.value, 35) / 100;
+                    margemAlvo = Utils.parseFloatSafe(document.getElementById('margem_alvo_fechado')?.value, 50) / 100;
+                    margemPremium = Utils.parseFloatSafe(document.getElementById('margem_premium_fechado')?.value, 60) / 100;
+                    break;
             }
 
-            // Calcular preços
             const precoPiso = custoTotal / (1 - margemPiso);
             const precoAlvo = custoTotal / (1 - margemAlvo);
             const precoPremium = custoTotal / (1 - margemPremium);
 
-            // Calcular custo de parcelamento
             const numParcelas = parseInt(document.getElementById('parcelas')?.value) || 6;
             const jurosParcelamento = Utils.parseFloatSafe(document.getElementById('juros_parcelamento')?.value, 1) / 100;
             
@@ -359,7 +359,6 @@ const Calculadora = {
                 custoParcelamento = precoAlvo - valorPresente;
             }
 
-            // Calcular deduções
             const imposto = Utils.parseFloatSafe(document.getElementById('imposto')?.value, 6) / 100;
             const csPercentual = document.getElementById('aplica_cs')?.value === 'sim' ? 
                 Utils.parseFloatSafe(document.getElementById('percentual_cs')?.value, 7.5) / 100 : 0;
@@ -375,7 +374,6 @@ const Calculadora = {
             const margemLiquidaR$ = receitaLiquida - custoTotal;
             const margemLiquida = precoAlvo > 0 ? (margemLiquidaR$ / precoAlvo) * 100 : 0;
 
-            // Salvar resultados
             resultados = {
                 custoDireto: custoDiretoTotal,
                 custoTotal: custoTotal,
@@ -437,7 +435,6 @@ const Calculadora = {
         Utils.setTextContent('calculo-preco-alvo', Utils.formatarMoeda(resultados.precoAlvo));
         Utils.setTextContent('calculo-margem-premium', Utils.formatarPercentual(resultados.margemPremium));
         Utils.setTextContent('calculo-preco-premium', Utils.formatarMoeda(resultados.precoPremium));
-        
         Utils.setTextContent('calculo-impostos', Utils.formatarMoeda(resultados.impostos));
         Utils.setTextContent('calculo-cs', Utils.formatarMoeda(resultados.cs));
         Utils.setTextContent('calculo-parceiro', Utils.formatarMoeda(resultados.parceiro));
@@ -484,6 +481,9 @@ const Calculadora = {
     }
 };
 
+// ===========================================
+// ALERTAS
+// ===========================================
 const Alertas = {
     gerar: function() {
         const alertasContainer = document.getElementById('alertas-container');
@@ -504,7 +504,6 @@ const Alertas = {
         
         let alertas = [];
         
-        // Alerta 1: Abaixo do piso
         if (precoComDesconto < resultados.precoPiso && resultados.precoPiso > 0) {
             alertas.push({
                 tipo: 'danger',
@@ -516,7 +515,6 @@ const Alertas = {
             });
         }
         
-        // Alerta 2: Desconto acima da alçada
         if (desconto > 0.15) {
             alertas.push({
                 tipo: 'warning',
@@ -527,7 +525,6 @@ const Alertas = {
             });
         }
         
-        // Alerta 3: Modelo de êxito sem cobertura de custo
         if (modeloCobranca === 'Êxito') {
             if (entrada < 30) {
                 alertas.push({
@@ -549,7 +546,6 @@ const Alertas = {
             }
         }
         
-        // Alerta 4: Escopo sem limites (retainer)
         if (modeloCobranca === 'Retainer') {
             if (escopo.trim() === '' || escopo.length < 30) {
                 alertas.push({
@@ -573,7 +569,28 @@ const Alertas = {
             }
         }
         
-        // Alerta 5: Risco de inadimplência
+        if (modeloCobranca === 'Retainer + Êxito' || modeloCobranca === 'Fechado + Êxito') {
+            if (escopo.trim() === '' || escopo.length < 50) {
+                alertas.push({
+                    tipo: 'info',
+                    icone: 'ℹ️',
+                    titulo: 'Modelo Híbrido sem Definição Clara',
+                    mensagem: `O modelo ${modeloCobranca} precisa de definições separadas para parte fixa e variável.`,
+                    recomendacao: `Detalhe no escopo: (1) Parte fixa (${modeloCobranca.split(' + ')[0]}) e (2) Parte variável (Êxito) com metas e gatilhos.`
+                });
+            }
+            
+            if (entrada < 20) {
+                alertas.push({
+                    tipo: 'warning',
+                    icone: '⚠️',
+                    titulo: 'Entrada Baixa para Modelo Híbrido',
+                    mensagem: 'Modelo híbrido com entrada muito baixa aumenta o risco.',
+                    recomendacao: 'Considere aumentar a entrada para pelo menos 20-30% para cobrir custos iniciais.'
+                });
+            }
+        }
+        
         if (risco === 'Alto') {
             alertas.push({
                 tipo: 'warning',
@@ -584,7 +601,6 @@ const Alertas = {
             });
         }
         
-        // Alerta 6: Margem líquida baixa
         if (resultados.margemLiquida < 20 && resultados.margemLiquida > 0) {
             alertas.push({
                 tipo: 'warning',
@@ -595,7 +611,6 @@ const Alertas = {
             });
         }
         
-        // Alerta 7: Parcelamento longo
         if (numParcelas > 12) {
             if (risco === 'Alto') {
                 alertas.push({
@@ -616,20 +631,6 @@ const Alertas = {
             }
         }
         
-        // Alerta 8: Modelo híbrido sem definição
-        if (modeloCobranca === 'Híbrido') {
-            if (escopo.trim() === '' || escopo.length < 50) {
-                alertas.push({
-                    tipo: 'info',
-                    icone: 'ℹ️',
-                    titulo: 'Modelo Híbrido sem Definição Clara',
-                    mensagem: 'O modelo híbrido precisa de definições separadas para parte fixa e variável.',
-                    recomendacao: 'Detalhe no escopo: (1) Parte fixa: retainer/fechado e (2) Parte variável: êxito.'
-                });
-            }
-        }
-        
-        // Alerta 9: Complexidade vs Preço
         if (complexidade === 'Alta' && resultados.margemLiquida < 25) {
             alertas.push({
                 tipo: 'warning',
@@ -640,7 +641,6 @@ const Alertas = {
             });
         }
         
-        // Alerta 10: Urgência sem adicional
         if (urgencia === 'Urgente' && resultados.margemLiquida < 30) {
             alertas.push({
                 tipo: 'info',
@@ -651,7 +651,6 @@ const Alertas = {
             });
         }
         
-        // Alerta 11: CS não aplicado
         if (aplicaCS === 'nao') {
             alertas.push({
                 tipo: 'info',
@@ -662,7 +661,6 @@ const Alertas = {
             });
         }
         
-        // Renderizar alertas
         if (alertas.length === 0) {
             alertasContainer.innerHTML = `
                 <div class="alert alert-success" style="display: flex; align-items: center; gap: 10px;">
@@ -698,6 +696,9 @@ const Alertas = {
     }
 };
 
+// ===========================================
+// SINCRONIZAÇÃO
+// ===========================================
 const Sincronizacao = {
     agendarAutomatica: function() {
         if (syncTimeout) {
@@ -786,13 +787,11 @@ const Sincronizacao = {
     
     enviarDados: function(dados, isAutoSave = false) {
         if (salvando) {
-            console.log('Já está salvando, ignorando...');
             return Promise.reject('Já salvando');
         }
         
         const agora = Date.now();
         if (agora - ultimoSalvamento < 2000) {
-            console.log('Salvamento muito recente, ignorando...');
             return Promise.reject('Salvamento recente');
         }
         
@@ -1044,6 +1043,9 @@ const Sincronizacao = {
     }
 };
 
+// ===========================================
+// HISTÓRICO COM PAGINAÇÃO E PDF
+// ===========================================
 const Historico = {
     carregar: function() {
         if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL === 'SUA_URL_DO_WEB_APP_AQUI') {
@@ -1061,7 +1063,9 @@ const Historico = {
             .then(response => response.json())
             .then(data => {
                 historicoCompleto = data || [];
-                this.renderizar(historicoCompleto);
+                historicoFiltrado = [...historicoCompleto];
+                paginaAtual = 1;
+                this.renderizar();
                 
                 const ultimaSync = document.getElementById('ultima-sincronizacao');
                 if (ultimaSync) ultimaSync.textContent = new Date().toLocaleTimeString('pt-BR');
@@ -1079,21 +1083,27 @@ const Historico = {
             });
     },
     
-    renderizar: function(dados) {
+    renderizar: function() {
         const tbody = document.getElementById('historico-lista');
         if (!tbody) return;
         
         tbody.innerHTML = '';
         
         const totalRegistros = document.getElementById('total-registros');
-        if (totalRegistros) totalRegistros.textContent = dados.length;
+        if (totalRegistros) totalRegistros.textContent = historicoFiltrado.length;
         
-        if (!dados || dados.length === 0) {
+        if (!historicoFiltrado || historicoFiltrado.length === 0) {
             tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 40px;">Nenhum registro encontrado</td></tr>';
+            this.renderizarPaginacao();
             return;
         }
         
-        dados.forEach(item => {
+        // Calcular página atual
+        const inicio = (paginaAtual - 1) * itensPorPagina;
+        const fim = Math.min(inicio + itensPorPagina, historicoFiltrado.length);
+        const dadosPagina = historicoFiltrado.slice(inicio, fim);
+        
+        dadosPagina.forEach(item => {
             const row = tbody.insertRow();
             
             let dataFormatada = '---';
@@ -1130,33 +1140,143 @@ const Historico = {
                     <div class="action-buttons">
                         <button class="btn-primary" onclick="Historico.editar('${item.id}')" style="padding: 4px 8px;" title="Editar">✏️</button>
                         <button class="btn-danger" onclick="Historico.excluir('${item.id}')" style="padding: 4px 8px;" title="Excluir">🗑️</button>
+                        <button class="btn-success" onclick="Historico.exportarPDFItem('${item.id}')" style="padding: 4px 8px;" title="Exportar PDF">📄</button>
                     </div>
                 </td>
             `;
         });
+        
+        this.renderizarPaginacao();
+    },
+    
+    renderizarPaginacao: function() {
+        const container = document.getElementById('paginacao-container');
+        if (!container) return;
+        
+        const totalPaginas = Math.ceil(historicoFiltrado.length / itensPorPagina);
+        
+        if (totalPaginas <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        let html = '<div class="paginacao">';
+        
+        // Botão Anterior
+        html += `<button class="btn-paginacao" onclick="Historico.mudarPagina(${paginaAtual - 1})" ${paginaAtual === 1 ? 'disabled' : ''}>◀ Anterior</button>`;
+        
+        // Números das páginas
+        const maxBotoes = 5;
+        let inicio = Math.max(1, paginaAtual - Math.floor(maxBotoes / 2));
+        let fim = Math.min(totalPaginas, inicio + maxBotoes - 1);
+        
+        if (fim - inicio + 1 < maxBotoes) {
+            inicio = Math.max(1, fim - maxBotoes + 1);
+        }
+        
+        if (inicio > 1) {
+            html += `<button class="btn-paginacao" onclick="Historico.mudarPagina(1)">1</button>`;
+            if (inicio > 2) html += `<span class="paginacao-ellipsis">...</span>`;
+        }
+        
+        for (let i = inicio; i <= fim; i++) {
+            html += `<button class="btn-paginacao ${i === paginaAtual ? 'active' : ''}" onclick="Historico.mudarPagina(${i})">${i}</button>`;
+        }
+        
+        if (fim < totalPaginas) {
+            if (fim < totalPaginas - 1) html += `<span class="paginacao-ellipsis">...</span>`;
+            html += `<button class="btn-paginacao" onclick="Historico.mudarPagina(${totalPaginas})">${totalPaginas}</button>`;
+        }
+        
+        // Botão Próximo
+        html += `<button class="btn-paginacao" onclick="Historico.mudarPagina(${paginaAtual + 1})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>Próximo ▶</button>`;
+        
+        // Seletor de itens por página
+        html += `
+            <select class="select-paginacao" onchange="Historico.mudarItensPorPagina(this.value)">
+                <option value="10" ${itensPorPagina === 10 ? 'selected' : ''}>10 por página</option>
+                <option value="20" ${itensPorPagina === 20 ? 'selected' : ''}>20 por página</option>
+                <option value="50" ${itensPorPagina === 50 ? 'selected' : ''}>50 por página</option>
+                <option value="100" ${itensPorPagina === 100 ? 'selected' : ''}>100 por página</option>
+            </select>
+        `;
+        
+        html += '</div>';
+        
+        // Informações da página
+        const inicioRegistro = (paginaAtual - 1) * itensPorPagina + 1;
+        const fimRegistro = Math.min(paginaAtual * itensPorPagina, historicoFiltrado.length);
+        
+        html += `
+            <div class="paginacao-info">
+                Mostrando ${inicioRegistro} - ${fimRegistro} de ${historicoFiltrado.length} registros
+            </div>
+        `;
+        
+        container.innerHTML = html;
+    },
+    
+    mudarPagina: function(novaPagina) {
+        const totalPaginas = Math.ceil(historicoFiltrado.length / itensPorPagina);
+        if (novaPagina < 1 || novaPagina > totalPaginas) return;
+        
+        paginaAtual = novaPagina;
+        this.renderizar();
+    },
+    
+    mudarItensPorPagina: function(novoValor) {
+        itensPorPagina = parseInt(novoValor);
+        paginaAtual = 1;
+        this.renderizar();
+    },
+    
+    filtrar: function(termo) {
+        if (!termo || termo.trim() === '') {
+            historicoFiltrado = [...historicoCompleto];
+        } else {
+            const termoLower = termo.toLowerCase().trim();
+            historicoFiltrado = historicoCompleto.filter(item => {
+                return (item.cliente && item.cliente.toLowerCase().includes(termoLower)) ||
+                       (item.produto && item.produto.toLowerCase().includes(termoLower)) ||
+                       (item.segmento && item.segmento.toLowerCase().includes(termoLower)) ||
+                       (item.id && item.id.toLowerCase().includes(termoLower));
+            });
+        }
+        
+        paginaAtual = 1;
+        this.renderizar();
+    },
+    
+    filtrarPorStatus: function(status) {
+        if (!status || status === '') {
+            historicoFiltrado = [...historicoCompleto];
+        } else {
+            historicoFiltrado = historicoCompleto.filter(item => item.status === status);
+        }
+        
+        paginaAtual = 1;
+        this.renderizar();
     },
     
     limparVisualizacao: function() {
         if (confirm('Limpar visualização do histórico? Os dados no Google Sheets não serão afetados.')) {
-            const lista = document.getElementById('historico-lista');
-            if (lista) {
-                lista.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 40px;">Visualização limpa. Clique em "Sincronizar" para recarregar.</td></tr>';
-            }
-            const totalRegistros = document.getElementById('total-registros');
-            if (totalRegistros) totalRegistros.textContent = '0';
+            historicoFiltrado = [];
+            historicoCompleto = [];
+            paginaAtual = 1;
+            this.renderizar();
             Utils.mostrarNotificacao('Visualização limpa', 'info');
         }
     },
     
     exportarCSV: function() {
-        if (historicoCompleto.length === 0) {
+        if (historicoFiltrado.length === 0) {
             Utils.mostrarNotificacao('Nenhum dado para exportar', 'warning');
             return;
         }
         
         let csv = 'ID,Data/Hora,Cliente,Segmento,Tipo,Risco,Produto,Modelo,Preço Alvo,Custo Total,Margem,Status\n';
         
-        historicoCompleto.forEach(item => {
+        historicoFiltrado.forEach(item => {
             const linha = [
                 `"${item.id || ''}"`,
                 `"${item.data || ''}"`,
@@ -1189,6 +1309,294 @@ const Historico = {
         Utils.mostrarNotificacao('CSV exportado com sucesso!', 'success');
     },
     
+    exportarPDF: function() {
+        if (historicoFiltrado.length === 0) {
+            Utils.mostrarNotificacao('Nenhum dado para exportar', 'warning');
+            return;
+        }
+        
+        let htmlContent = `
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Histórico de Simulações</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 20px; }
+                    h1 { color: #2d3748; font-size: 24px; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                    th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px; font-size: 10px; }
+                    td { border: 1px solid #e2e8f0; padding: 6px; font-size: 9px; }
+                    .money { text-align: right; }
+                    .percent { text-align: right; }
+                    .footer { margin-top: 20px; font-size: 10px; color: #718096; text-align: right; }
+                </style>
+            </head>
+            <body>
+                <h1>📊 Histórico de Simulações - MFBD Precificação</h1>
+                <p>Data de exportação: ${new Date().toLocaleString('pt-BR')}</p>
+                <p>Total de registros: ${historicoFiltrado.length}</p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Data</th>
+                            <th>Cliente</th>
+                            <th>Segmento</th>
+                            <th>Tipo</th>
+                            <th>Risco</th>
+                            <th>Produto</th>
+                            <th>Modelo</th>
+                            <th>Preço Alvo</th>
+                            <th>Custo Total</th>
+                            <th>Margem</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        historicoFiltrado.forEach(item => {
+            let dataFormatada = '---';
+            if (item.data) {
+                try {
+                    const dataObj = new Date(item.data);
+                    dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                } catch (e) {
+                    dataFormatada = item.data;
+                }
+            }
+            
+            htmlContent += `
+                <tr>
+                    <td>${item.id ? item.id.substring(0, 8) + '...' : '---'}</td>
+                    <td>${dataFormatada}</td>
+                    <td>${item.cliente || '---'}</td>
+                    <td>${item.segmento || '---'}</td>
+                    <td>${item.tipo || '---'}</td>
+                    <td>${item.risco || '---'}</td>
+                    <td>${item.produto || '---'}</td>
+                    <td>${item.modelo || '---'}</td>
+                    <td class="money">${Utils.formatarMoeda(item.precoAlvo)}</td>
+                    <td class="money">${Utils.formatarMoeda(item.custoTotal)}</td>
+                    <td class="percent">${(item.margemLiquida || 0).toFixed(1)}%</td>
+                    <td>${item.status || 'Pendente'}</td>
+                </tr>
+            `;
+        });
+        
+        htmlContent += `
+                    </tbody>
+                </table>
+                <div class="footer">
+                    Gerado pelo MFBD Precificação Estratégica
+                </div>
+            </body>
+            </html>
+        `;
+        
+        const janelaPDF = window.open('', '_blank');
+        janelaPDF.document.write(htmlContent);
+        janelaPDF.document.close();
+        janelaPDF.print();
+    },
+    
+    exportarPDFItem: function(id) {
+        const item = historicoCompleto.find(i => i.id === id);
+        if (!item) {
+            Utils.mostrarNotificacao('Item não encontrado', 'error');
+            return;
+        }
+        
+        fetch(GOOGLE_SHEETS_URL + `?action=carregarSimulacao&id=${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.gerarPDFSimulacao(data.dados, item);
+                } else {
+                    Utils.mostrarNotificacao('Erro ao carregar dados completos', 'error');
+                }
+            })
+            .catch(error => {
+                Utils.mostrarNotificacao('Erro: ' + error.message, 'error');
+            });
+    },
+    
+    gerarPDFSimulacao: function(dados, itemResumido) {
+        const sim = dados;
+        
+        let htmlContent = `
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Simulação - ${sim.input.cliente}</title>
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 30px; }
+                    .header { text-align: center; margin-bottom: 30px; }
+                    .header h1 { color: #2d3748; font-size: 28px; margin-bottom: 5px; }
+                    .header h2 { color: #667eea; font-size: 18px; font-weight: normal; }
+                    .header .data { color: #718096; font-size: 12px; }
+                    
+                    .section { 
+                        background: #f8fafc; 
+                        border-radius: 10px; 
+                        padding: 20px; 
+                        margin-bottom: 20px;
+                        border: 1px solid #e2e8f0;
+                    }
+                    .section-title { 
+                        font-size: 18px; 
+                        font-weight: 600; 
+                        color: #2d3748; 
+                        margin-bottom: 15px;
+                        border-bottom: 2px solid #667eea;
+                        padding-bottom: 5px;
+                    }
+                    
+                    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+                    
+                    .info-row { display: flex; margin-bottom: 10px; }
+                    .info-label { font-weight: 600; width: 150px; color: #4a5568; }
+                    .info-value { flex: 1; color: #2d3748; }
+                    
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th { background: #667eea; color: white; padding: 8px; text-align: left; }
+                    td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+                    
+                    .price-box { 
+                        text-align: center; 
+                        padding: 15px; 
+                        border-radius: 10px; 
+                        border: 2px solid;
+                    }
+                    .price-box.piso { border-color: #ed8936; }
+                    .price-box.alvo { border-color: #48bb78; }
+                    .price-box.premium { border-color: #9f7aea; }
+                    
+                    .price-title { font-size: 12px; color: #718096; margin-bottom: 5px; }
+                    .price-amount { font-size: 24px; font-weight: 800; color: #2d3748; }
+                    
+                    .footer { 
+                        margin-top: 30px; 
+                        text-align: center; 
+                        color: #718096; 
+                        font-size: 11px;
+                        border-top: 1px solid #e2e8f0;
+                        padding-top: 15px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>📊 MFBD Precificação Estratégica</h1>
+                    <h2>Simulação Comercial</h2>
+                    <div class="data">Gerado em: ${new Date().toLocaleString('pt-BR')}</div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">📋 Dados do Cliente</div>
+                    <div class="grid-2">
+                        <div>
+                            <div class="info-row"><span class="info-label">Cliente:</span> <span class="info-value">${sim.input.cliente || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Segmento:</span> <span class="info-value">${sim.input.segmento || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Tipo:</span> <span class="info-value">${sim.input.tipo || '---'}</span></div>
+                        </div>
+                        <div>
+                            <div class="info-row"><span class="info-label">Risco:</span> <span class="info-value">${sim.input.risco || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Produto:</span> <span class="info-value">${sim.input.produto || '---'}</span></div>
+                            <div class="info-row"><span class="info-label">Modelo:</span> <span class="info-value">${sim.input.modeloCobranca || '---'}</span></div>
+                        </div>
+                    </div>
+                    <div class="info-row"><span class="info-label">Escopo:</span> <span class="info-value">${sim.input.escopo || '---'}</span></div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">💰 Preços Sugeridos</div>
+                    <div class="grid-3">
+                        <div class="price-box piso">
+                            <div class="price-title">PREÇO PISO</div>
+                            <div class="price-amount">${Utils.formatarMoeda(itemResumido.precoAlvo * 0.8)}</div>
+                            <div style="font-size: 11px;">Margem: 40%</div>
+                        </div>
+                        <div class="price-box alvo">
+                            <div class="price-title">PREÇO ALVO</div>
+                            <div class="price-amount">${Utils.formatarMoeda(itemResumido.precoAlvo)}</div>
+                            <div style="font-size: 11px;">Margem: 55%</div>
+                        </div>
+                        <div class="price-box premium">
+                            <div class="price-title">PREÇO PREMIUM</div>
+                            <div class="price-amount">${Utils.formatarMoeda(itemResumido.precoAlvo * 1.2)}</div>
+                            <div style="font-size: 11px;">Margem: 65%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid-2">
+                    <div class="section">
+                        <div class="section-title">📊 Composição de Custos</div>
+                        <table>
+                            <tr><th>Perfil</th><th>Horas</th><th>Custo/Hora</th><th>Total</th></tr>
+        `;
+        
+        if (sim.perfis && sim.perfis.length > 0) {
+            sim.perfis.forEach(p => {
+                const custoHora = p.custoHora || 0;
+                const custoTotal = p.horas * custoHora;
+                htmlContent += `<tr><td>${p.nome}</td><td>${p.horas}h</td><td>${Utils.formatarMoeda(custoHora)}</td><td>${Utils.formatarMoeda(custoTotal)}</td></tr>`;
+            });
+        }
+        
+        htmlContent += `
+                        </table>
+                        <div style="margin-top: 15px;">
+                            <div class="info-row"><span class="info-label">Custo Direto:</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.custoTotal * 0.7)}</span></div>
+                            <div class="info-row"><span class="info-label">Overhead:</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.custoTotal * 0.3)}</span></div>
+                            <div class="info-row"><span class="info-label" style="font-weight: 800;">CUSTO TOTAL:</span> <span class="info-value" style="font-weight: 800;">${Utils.formatarMoeda(itemResumido.custoTotal)}</span></div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <div class="section-title">💳 Condições Comerciais</div>
+                        <div class="info-row"><span class="info-label">Entrada:</span> <span class="info-value">${sim.input.entrada || 30}%</span></div>
+                        <div class="info-row"><span class="info-label">Parcelas:</span> <span class="info-value">${sim.input.parcelas || 6}x</span></div>
+                        <div class="info-row"><span class="info-label">Desconto:</span> <span class="info-value">${sim.input.desconto || 0}%</span></div>
+                        <div class="info-row"><span class="info-label">Parceiro:</span> <span class="info-value">${sim.input.temParceiro === 'sim' ? sim.input.percentualParceiro + '%' : 'Não'}</span></div>
+                        <div class="info-row"><span class="info-label">CS:</span> <span class="info-value">${sim.input.aplicaCS === 'sim' ? sim.input.percentualCS + '%' : 'Não'}</span></div>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">📈 Análise de Margem</div>
+                    <div class="grid-2">
+                        <div>
+                            <div class="info-row"><span class="info-label">Receita Bruta:</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.precoAlvo)}</span></div>
+                            <div class="info-row"><span class="info-label">Impostos:</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.precoAlvo * 0.06)}</span></div>
+                            <div class="info-row"><span class="info-label">CS:</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.precoAlvo * 0.075)}</span></div>
+                            <div class="info-row"><span class="info-label">Receita Líquida:</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.precoAlvo * 0.865)}</span></div>
+                        </div>
+                        <div>
+                            <div class="info-row"><span class="info-label">Custo Total:</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.custoTotal)}</span></div>
+                            <div class="info-row"><span class="info-label">Margem Líquida (R$):</span> <span class="info-value">${Utils.formatarMoeda(itemResumido.precoAlvo * 0.865 - itemResumido.custoTotal)}</span></div>
+                            <div class="info-row"><span class="info-label">Margem Líquida (%):</span> <span class="info-value">${(itemResumido.margemLiquida || 0).toFixed(1)}%</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p>Este é um documento gerado automaticamente pelo sistema MFBD Precificação Estratégica</p>
+                    <p>ID da Simulação: ${itemResumido.id} | Data: ${new Date(itemResumido.data).toLocaleString('pt-BR')}</p>
+                </div>
+            </body>
+            </html>
+        `;
+        
+        const janelaPDF = window.open('', '_blank');
+        janelaPDF.document.write(htmlContent);
+        janelaPDF.document.close();
+        janelaPDF.print();
+    },
+    
     editar: function(id) {
         if (!confirm('Carregar esta simulação para edição?')) return;
         
@@ -1204,7 +1612,6 @@ const Historico = {
                     const btnCancelar = document.getElementById('btnCancelar');
                     if (btnCancelar) btnCancelar.style.display = 'inline-flex';
                     
-                    // Preencher campos
                     const campoCliente = document.getElementById('cliente_nome');
                     if (campoCliente) campoCliente.value = sim.input.cliente || '';
                     
@@ -1292,7 +1699,6 @@ const Historico = {
                                 container.appendChild(newRow);
                             });
                         } else {
-                            // Perfis padrão
                             Perfis.adicionar();
                             Perfis.adicionar();
                         }
@@ -1340,12 +1746,14 @@ const Historico = {
         if (confirm(`Alterar status para "${novoStatus}"?`)) {
             elemento.textContent = novoStatus;
             elemento.className = `status-badge status-${novoStatus.toLowerCase()}`;
-            
             Utils.mostrarNotificacao(`Status alterado para ${novoStatus}`, 'success');
         }
     }
 };
 
+// ===========================================
+// EDIÇÃO
+// ===========================================
 const Edicao = {
     cancelar: function() {
         if (editandoId) {
@@ -1415,7 +1823,7 @@ const Utils = {
 };
 
 // ===========================================
-// FUNÇÕES DE CONFIGURAÇÃO (Aliases para compatibilidade)
+// FUNÇÕES DE CONFIGURAÇÃO
 // ===========================================
 function configurarAutoSave() {
     document.querySelectorAll('input, select, textarea').forEach(element => {
@@ -1461,13 +1869,10 @@ function toggleCS() {
 // INICIALIZAÇÃO
 // ===========================================
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar se já estava logado
     if (!Login.verificarSessao()) {
-        // Se não estiver logado, mostrar tela de login
         document.getElementById('loginContainer').style.display = 'flex';
         document.getElementById('mainContent').classList.remove('active');
         
-        // Configurar eventos de tecla para login
         const loginEmail = document.getElementById('loginEmail');
         const loginSenha = document.getElementById('loginSenha');
         
