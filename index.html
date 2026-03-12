@@ -25,11 +25,11 @@
         </div>
         
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('input', this)">📝 Input</button>
-            <button class="tab-btn" onclick="showTab('tabelas', this)">📊 Tabelas</button>
-            <button class="tab-btn" onclick="showTab('calculo', this)">🧮 Cálculo</button>
-            <button class="tab-btn" onclick="showTab('output', this)">📤 Output</button>
-            <button class="tab-btn" onclick="showTab('historico', this)">📜 Histórico</button>
+            <button class="tab-btn active" onclick="UI.showTab('input', this)">📝 Input</button>
+            <button class="tab-btn" onclick="UI.showTab('tabelas', this)">📊 Tabelas</button>
+            <button class="tab-btn" onclick="UI.showTab('calculo', this)">🧮 Cálculo</button>
+            <button class="tab-btn" onclick="UI.showTab('output', this)">📤 Output</button>
+            <button class="tab-btn" onclick="UI.showTab('historico', this)">📜 Histórico</button>
         </div>
 
         <!-- Aba INPUT -->
@@ -41,7 +41,7 @@
                 <div class="card">
                     <div class="card-header">Cliente / Negócio</div>
                     <div class="form-group">
-                        <label>Cliente (nome)</label>
+                        <label>Cliente (nome) <span class="required">*</span></label>
                         <input type="text" id="cliente_nome" placeholder="Digite o nome do cliente" value="Cliente Exemplo">
                     </div>
                     <div class="form-group">
@@ -87,8 +87,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Escopo</label>
-                        <textarea id="escopo" rows="3" placeholder="Descreva o escopo do serviço...">Desenvolvimento de sistema web com módulos administrativo e front-end para e-commerce</textarea>
+                        <label>Escopo <span class="required">*</span></label>
+                        <textarea id="escopo" rows="3" placeholder="Descreva o escopo do serviço em detalhes...">Desenvolvimento de sistema web com módulos administrativo e front-end para e-commerce</textarea>
+                        <small class="field-hint">Mínimo 30 caracteres para retainer</small>
                     </div>
                     <div class="grid-2">
                         <div class="form-group">
@@ -112,7 +113,7 @@
 
             <!-- Modelo de Cobrança -->
             <div class="card mt-4">
-                <div class="card-header">Modelo de Cobrança</div>
+                <div class="card-header">Modelo de Cobrança <span class="required">*</span></div>
                 <div class="grid-4">
                     <label style="display: flex; align-items: center; gap: 5px;">
                         <input type="radio" name="modelo_cobranca" value="Hora" checked> Hora
@@ -134,7 +135,7 @@
 
             <!-- Equipe e Esforço -->
             <div class="card mt-4">
-                <div class="card-header">Equipe e Esforço</div>
+                <div class="card-header">Equipe e Esforço <span class="required">*</span></div>
                 <div id="perfis-container">
                     <div class="perfil-row">
                         <select class="perfil-nome">
@@ -147,7 +148,7 @@
                         </select>
                         <input type="number" class="perfil-horas" placeholder="Horas" value="80" min="0" step="1">
                         <input type="text" class="perfil-buffer" placeholder="Buffer %" readonly value="20%">
-                        <button type="button" class="btn-danger" onclick="removerPerfil(this)" style="padding: 12px;">🗑️</button>
+                        <button type="button" class="btn-danger" onclick="Perfis.remover(this)" style="padding: 12px;">🗑️</button>
                     </div>
                     <div class="perfil-row">
                         <select class="perfil-nome">
@@ -160,10 +161,10 @@
                         </select>
                         <input type="number" class="perfil-horas" placeholder="Horas" value="40" min="0" step="1">
                         <input type="text" class="perfil-buffer" placeholder="Buffer %" readonly value="20%">
-                        <button type="button" class="btn-danger" onclick="removerPerfil(this)" style="padding: 12px;">🗑️</button>
+                        <button type="button" class="btn-danger" onclick="Perfis.remover(this)" style="padding: 12px;">🗑️</button>
                     </div>
                 </div>
-                <button type="button" class="btn-secondary" onclick="adicionarPerfil()" style="margin-top: 10px; width: 100%;">+ Adicionar Perfil</button>
+                <button type="button" class="btn-secondary" onclick="Perfis.adicionar()" style="margin-top: 10px; width: 100%;">+ Adicionar Perfil</button>
             </div>
 
             <!-- Condições Comerciais -->
@@ -232,14 +233,14 @@
             </div>
 
             <div class="action-bar">
-                <button type="button" class="btn btn-primary" onclick="calcularPrecos()">🧮 Calcular Preços</button>
-                <button type="button" class="btn btn-success" onclick="enviarParaGoogleSheets(false)" id="btnEnviar">
+                <button type="button" class="btn btn-primary" onclick="Calculadora.calcular()">🧮 Calcular Preços</button>
+                <button type="button" class="btn btn-success" onclick="Sincronizacao.enviar(false)" id="btnEnviar">
                     <span id="btnEnviarTexto">💾 Salvar Agora</span>
                     <span id="btnEnviarLoading" style="display: none;" class="loading"></span>
                 </button>
-                <button type="button" class="btn btn-secondary" onclick="testarConexao()">🔌 Testar Conexão</button>
-                <button type="button" class="btn btn-warning" onclick="recriarCabecalho()">🔄 Recriar Cabeçalho</button>
-                <button type="button" class="btn btn-secondary" onclick="cancelarEdicao()" id="btnCancelar" style="display: none;">❌ Cancelar Edição</button>
+                <button type="button" class="btn btn-secondary" onclick="Sincronizacao.testar()">🔌 Testar Conexão</button>
+                <button type="button" class="btn btn-warning" onclick="Sincronizacao.recriarCabecalho()">🔄 Recriar Cabeçalho</button>
+                <button type="button" class="btn btn-secondary" onclick="Edicao.cancelar()" id="btnCancelar" style="display: none;">❌ Cancelar Edição</button>
             </div>
             <div class="text-small mt-4" style="text-align: right;">
                 ⚡ Auto-save salva automaticamente após 3 segundos de inatividade
@@ -449,7 +450,7 @@
             </div>
 
             <div class="action-bar mt-4">
-                <button type="button" class="btn btn-primary" onclick="atualizarTabelas()">🔄 Atualizar Parâmetros</button>
+                <button type="button" class="btn btn-primary" onclick="Tabelas.atualizar()">🔄 Atualizar Parâmetros</button>
             </div>
         </div>
 
@@ -531,42 +532,54 @@
                             </tr>
                             <tr>
                                 <td>11</td>
+                                <td>Margem Premium (%)</td>
+                                <td>PROCV(Modelo;TabelaMargens)</td>
+                                <td id="calculo-margem-premium" class="percent">65,0%</td>
+                            </tr>
+                            <tr>
+                                <td>12</td>
+                                <td>PREÇO PREMIUM</td>
+                                <td>Custo Total / (1 - MargemPremium)</td>
+                                <td id="calculo-preco-premium" class="money">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>13</td>
                                 <td>Impostos</td>
                                 <td>Preço Alvo x %Impostos</td>
                                 <td id="calculo-impostos" class="money">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td>12</td>
+                                <td>14</td>
                                 <td>CS</td>
                                 <td>SE(AplicaCS; Preço Alvo x %CS; 0)</td>
                                 <td id="calculo-cs" class="money">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td>13</td>
+                                <td>15</td>
                                 <td>Parceiro</td>
                                 <td>SE(TemParceiro; Preço Alvo x %Parceiro; 0)</td>
                                 <td id="calculo-parceiro" class="money">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td>14</td>
+                                <td>16</td>
                                 <td>Receita Líquida</td>
                                 <td>Preço Alvo - Impostos - CS - Parceiro</td>
                                 <td id="calculo-receita-liquida" class="money">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td>15</td>
+                                <td>17</td>
                                 <td>Margem Líquida (R$)</td>
                                 <td>Receita Líquida - Custo Total</td>
                                 <td id="calculo-margem-liquida-r$" class="money">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td>16</td>
+                                <td>18</td>
                                 <td>Margem Líquida (%)</td>
                                 <td>Margem Líquida R$ / Preço Alvo</td>
                                 <td id="calculo-margem-liquida" class="percent">0,0%</td>
                             </tr>
                             <tr>
-                                <td>17</td>
+                                <td>19</td>
                                 <td>Custo Parcelamento</td>
                                 <td>Valor Presente - Preço Alvo</td>
                                 <td id="calculo-custo-parcelamento" class="money">R$ 0,00</td>
@@ -672,14 +685,17 @@
             <h2 style="margin-bottom: 20px; color: #2d3748;">📜 Histórico de Simulações</h2>
             
             <div class="action-bar mb-4">
-                <button type="button" class="btn btn-primary" onclick="carregarHistoricoDoGoogle()">
+                <button type="button" class="btn btn-primary" onclick="Historico.carregar()">
                     🔄 Sincronizar Agora
                 </button>
-                <button type="button" class="btn btn-danger" onclick="limparHistoricoLocal()">
+                <button type="button" class="btn btn-danger" onclick="Historico.limparVisualizacao()">
                     🗑️ Limpar Visualização
                 </button>
-                <button type="button" class="btn btn-success" onclick="exportarCSV()">
+                <button type="button" class="btn btn-success" onclick="Historico.exportarCSV()">
                     📥 Exportar CSV
+                </button>
+                <button type="button" class="btn btn-warning" onclick="Sincronizacao.recriarCabecalho()">
+                    🔧 Recriar Cabeçalho
                 </button>
             </div>
             
