@@ -1,7 +1,13 @@
 // ===========================================
+// MFBD PRECIFICAÇÃO ESTRATÉGICA - SCRIPT COMPLETO
+// ===========================================
+// VERSÃO: 3.0 - SALVA TODAS AS 4 ABAS NA PLANILHA
+// ===========================================
+
+// ===========================================
 // CONFIGURAÇÕES
 // ===========================================
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzQKaT2_OL9gmbfqq19mdjwwfCPdU0sKhI08iQy2jzn6K2p1WjaewmwcEQhDYHGPn5UiQ/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxZ_cX9V39x4rWzJp_B6oONvm6i16qI-lXn3Apc80B7mRN7woBRxlctyv6oTDieWPNToQ/exec';
 
 // ===========================================
 // VARIÁVEIS GLOBAIS
@@ -39,8 +45,6 @@ let itensPorPagina = 20;
 // ===========================================
 // FUNÇÕES GLOBAIS PARA ONCLICK
 // ===========================================
-
-// Funções de toggle (DEVEM estar no escopo global)
 window.toggleParceiro = function() {
     const temParceiro = document.getElementById('tem_parceiro')?.value;
     const parceiroGroup = document.getElementById('parceiro-group');
@@ -90,7 +94,6 @@ const Login = {
         if (buttonLoading) buttonLoading.style.display = 'inline-block';
         if (errorDiv) errorDiv.classList.remove('active');
         
-        // Simular login bem-sucedido (já que está com no-cors)
         this.usuarioAtual = email;
         const usuarioLogado = document.getElementById('usuarioLogado');
         if (usuarioLogado) usuarioLogado.textContent = email;
@@ -160,7 +163,6 @@ const Login = {
     },
     
     configurarEventos: function() {
-        // Configurar eventos de input para auto-save
         document.querySelectorAll('input, select, textarea').forEach(element => {
             element.removeEventListener('input', Sincronizacao.agendarAutomatica);
             element.removeEventListener('change', this.handleChange);
@@ -273,7 +275,7 @@ const Perfis = {
 };
 
 // ===========================================
-// TABELAS
+// TABELAS - GERENCIAMENTO DE PARÂMETROS
 // ===========================================
 const Tabelas = {
     carregar: function() {
@@ -299,7 +301,6 @@ const Tabelas = {
     },
     
     carregarValoresPadrao: function() {
-        // Valores padrão caso não consiga carregar da planilha
         const valoresPadrao = {
             custo_estagio: 2500, custo_jr: 5000, custo_pl: 8000, custo_sr: 12000, custo_coord: 15000, custo_socio: 20000,
             horas_estagio: 150, horas_jr: 150, horas_pl: 150, horas_sr: 150, horas_coord: 150, horas_socio: 150,
@@ -579,7 +580,6 @@ const Calculadora = {
                     break;
                 case 'Retainer + Êxito':
                 case 'Fechado + Êxito':
-                    // Para híbridos, usar a margem da parte fixa
                     margemPiso = modeloCobranca.includes('Retainer') ? 
                         Utils.parseFloatSafe(document.getElementById('margem_piso_retainer')?.value, 45) / 100 :
                         Utils.parseFloatSafe(document.getElementById('margem_piso_fechado')?.value, 35) / 100;
@@ -948,7 +948,7 @@ const Alertas = {
 };
 
 // ===========================================
-// SINCRONIZAÇÃO
+// SINCRONIZAÇÃO - ENVIA TODOS OS DADOS DAS 4 ABAS
 // ===========================================
 const Sincronizacao = {
     agendarAutomatica: function() {
@@ -1077,9 +1077,13 @@ const Sincronizacao = {
         });
     },
     
+    // ===========================================
+    // COLETA TODOS OS DADOS DAS 4 ABAS
+    // ===========================================
     coletarDadosCompletos: function() {
         const resultadosAtuais = Calculadora.calcular();
         
+        // ===== 1. 📝 INPUT - DADOS DO CLIENTE E SERVIÇO =====
         const dadosInput = {
             cliente: document.getElementById('cliente_nome')?.value || '',
             segmento: document.getElementById('segmento')?.value || '',
@@ -1100,7 +1104,8 @@ const Sincronizacao = {
             percentualCS: document.getElementById('aplica_cs')?.value === 'sim' ? 
                 Utils.parseFloatSafe(document.getElementById('percentual_cs')?.value, 7.5) : 0
         };
-        
+
+        // ===== 2. 📝 INPUT - PERFIS =====
         let perfisArray = [];
         document.querySelectorAll('.perfil-row').forEach(row => {
             const nome = row.querySelector('.perfil-nome')?.value;
@@ -1109,14 +1114,70 @@ const Sincronizacao = {
                 perfisArray.push({ nome, horas });
             }
         });
-        
+
         if (perfisArray.length === 0) {
             perfisArray = [
                 { nome: 'Pl', horas: 80 },
                 { nome: 'Jr', horas: 40 }
             ];
         }
-        
+
+        // ===== 3. 📊 TABELAS - TODOS OS PARÂMETROS =====
+        const dadosTabelas = {
+            // Custos
+            custo_estagio: Utils.parseFloatSafe(document.getElementById('custo_estagio')?.value, 2500),
+            custo_jr: Utils.parseFloatSafe(document.getElementById('custo_jr')?.value, 5000),
+            custo_pl: Utils.parseFloatSafe(document.getElementById('custo_pl')?.value, 8000),
+            custo_sr: Utils.parseFloatSafe(document.getElementById('custo_sr')?.value, 12000),
+            custo_coord: Utils.parseFloatSafe(document.getElementById('custo_coord')?.value, 15000),
+            custo_socio: Utils.parseFloatSafe(document.getElementById('custo_socio')?.value, 20000),
+            
+            // Horas
+            horas_estagio: Utils.parseFloatSafe(document.getElementById('horas_estagio')?.value, 150),
+            horas_jr: Utils.parseFloatSafe(document.getElementById('horas_jr')?.value, 150),
+            horas_pl: Utils.parseFloatSafe(document.getElementById('horas_pl')?.value, 150),
+            horas_sr: Utils.parseFloatSafe(document.getElementById('horas_sr')?.value, 150),
+            horas_coord: Utils.parseFloatSafe(document.getElementById('horas_coord')?.value, 150),
+            horas_socio: Utils.parseFloatSafe(document.getElementById('horas_socio')?.value, 150),
+            
+            // Overhead
+            overhead_hora: Utils.parseFloatSafe(document.getElementById('overhead_hora')?.value, 20),
+            
+            // Margens Hora
+            margem_piso_hora: Utils.parseFloatSafe(document.getElementById('margem_piso_hora')?.value, 40),
+            margem_alvo_hora: Utils.parseFloatSafe(document.getElementById('margem_alvo_hora')?.value, 55),
+            margem_premium_hora: Utils.parseFloatSafe(document.getElementById('margem_premium_hora')?.value, 65),
+            
+            // Margens Fechado
+            margem_piso_fechado: Utils.parseFloatSafe(document.getElementById('margem_piso_fechado')?.value, 35),
+            margem_alvo_fechado: Utils.parseFloatSafe(document.getElementById('margem_alvo_fechado')?.value, 50),
+            margem_premium_fechado: Utils.parseFloatSafe(document.getElementById('margem_premium_fechado')?.value, 60),
+            
+            // Margens Retainer
+            margem_piso_retainer: Utils.parseFloatSafe(document.getElementById('margem_piso_retainer')?.value, 45),
+            margem_alvo_retainer: Utils.parseFloatSafe(document.getElementById('margem_alvo_retainer')?.value, 60),
+            margem_premium_retainer: Utils.parseFloatSafe(document.getElementById('margem_premium_retainer')?.value, 70),
+            
+            // Margens Êxito
+            margem_piso_exito: Utils.parseFloatSafe(document.getElementById('margem_piso_exito')?.value, 50),
+            margem_alvo_exito: Utils.parseFloatSafe(document.getElementById('margem_alvo_exito')?.value, 70),
+            margem_premium_exito: Utils.parseFloatSafe(document.getElementById('margem_premium_exito')?.value, 80),
+            
+            // Impostos e Taxas
+            imposto: Utils.parseFloatSafe(document.getElementById('imposto')?.value, 6),
+            taxa_pagamento: Utils.parseFloatSafe(document.getElementById('taxa_pagamento')?.value, 2.5),
+            juros_parcelamento: Utils.parseFloatSafe(document.getElementById('juros_parcelamento')?.value, 1),
+            cs_padrao: Utils.parseFloatSafe(document.getElementById('cs_padrao')?.value, 7.5),
+            
+            // Buffers
+            buffer_complexidade_baixa: Utils.parseFloatSafe(document.getElementById('buffer_complexidade_baixa')?.value, 10),
+            buffer_complexidade_media: Utils.parseFloatSafe(document.getElementById('buffer_complexidade_media')?.value, 20),
+            buffer_complexidade_alta: Utils.parseFloatSafe(document.getElementById('buffer_complexidade_alta')?.value, 30),
+            buffer_urgencia_normal: Utils.parseFloatSafe(document.getElementById('buffer_urgencia_normal')?.value, 0),
+            buffer_urgencia_urgente: Utils.parseFloatSafe(document.getElementById('buffer_urgencia_urgente')?.value, 20)
+        };
+
+        // ===== 4. 🧮 CÁLCULO E 📤 OUTPUT - RESULTADOS =====
         return {
             action: 'salvar',
             timestamp: new Date().toISOString(),
@@ -1124,6 +1185,7 @@ const Sincronizacao = {
             input: dadosInput,
             perfis: perfisArray,
             resultados: {
+                // Resultados do cálculo
                 custoDireto: resultadosAtuais.custoDireto || 0,
                 custoTotal: resultadosAtuais.custoTotal || 0,
                 custoParcelamento: resultadosAtuais.custoParcelamento || 0,
@@ -1137,7 +1199,10 @@ const Sincronizacao = {
                 impostos: resultadosAtuais.impostos || 0,
                 cs: resultadosAtuais.cs || 0,
                 parceiro: resultadosAtuais.parceiro || 0,
-                receitaLiquida: resultadosAtuais.receitaLiquida || 0
+                receitaLiquida: resultadosAtuais.receitaLiquida || 0,
+                margemLiquidaR$: resultadosAtuais.margemLiquidaR$ || 0,
+                // Parâmetros das tabelas
+                ...dadosTabelas
             }
         };
     },
@@ -1305,26 +1370,27 @@ const Sincronizacao = {
 };
 
 // ===========================================
-// HISTÓRICO
+// HISTÓRICO - RECEBE TODOS OS DADOS DA PLANILHA
 // ===========================================
 const Historico = {
     carregar: function() {
         if (!GOOGLE_SHEETS_URL || GOOGLE_SHEETS_URL.includes('SUA_URL')) {
             const lista = document.getElementById('historico-lista');
             if (lista) {
-                lista.innerHTML = '<tr><td colspan="13" style="text-align: center;">Configure a URL do Web App no código primeiro!</td></tr>';
+                lista.innerHTML = '<tr><td colspan="14" style="text-align: center;">Configure a URL do Web App no código primeiro!</td></tr>';
             }
             return;
         }
         
         const lista = document.getElementById('historico-lista');
         if (lista) {
-            lista.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 40px;"><div class="loading" style="border-top-color: #667eea;"></div> Carregando dados...</td></tr>';
+            lista.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 40px;"><div class="loading" style="border-top-color: #667eea;"></div> Carregando dados...</td></tr>';
         }
         
         fetch(GOOGLE_SHEETS_URL + '?action=carregarHistorico')
             .then(response => response.json())
             .then(data => {
+                // Recebe TODOS os dados da planilha (68 colunas)
                 historicoCompleto = data && Array.isArray(data) ? data : [];
                 historicoFiltrado = [...historicoCompleto];
                 paginaAtual = 1;
@@ -1340,7 +1406,7 @@ const Historico = {
             .catch(error => {
                 const lista = document.getElementById('historico-lista');
                 if (lista) {
-                    lista.innerHTML = '<tr><td colspan="13" style="text-align: center; color: #f56565;">Erro ao carregar: ' + error.message + '</td></tr>';
+                    lista.innerHTML = '<tr><td colspan="14" style="text-align: center; color: #f56565;">Erro ao carregar: ' + error.message + '</td></tr>';
                 }
                 Utils.mostrarNotificacao('Erro ao carregar histórico: ' + error.message, 'error');
             });
@@ -1356,7 +1422,7 @@ const Historico = {
         if (totalRegistros) totalRegistros.textContent = historicoFiltrado.length;
         
         if (!historicoFiltrado || historicoFiltrado.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 40px;">Nenhum registro encontrado</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="14" style="text-align: center; padding: 40px;">Nenhum registro encontrado</td></tr>';
             this.renderizarPaginacao();
             return;
         }
@@ -1383,6 +1449,7 @@ const Historico = {
             if (item.status === 'Ganho') statusClass = 'status-ganho';
             if (item.status === 'Perdido') statusClass = 'status-perdido';
             
+            // Exibe os dados principais no histórico
             row.innerHTML = `
                 <td title="${item.id || ''}">${item.id ? item.id.substring(0, 8) + '...' : '---'}</td>
                 <td>${dataFormatada}</td>
@@ -1406,9 +1473,17 @@ const Historico = {
                     </div>
                 </td>
             `;
+            
+            // Armazena todos os dados no dataset para uso posterior
+            row.dataset.detalhes = JSON.stringify(item);
         });
         
         this.renderizarPaginacao();
+    },
+    
+    // Método para obter detalhes completos de um item
+    getDetalhes: function(id) {
+        return historicoCompleto.find(item => item.id === id) || null;
     },
     
     renderizarPaginacao: function() {
@@ -1582,9 +1657,9 @@ const Historico = {
                 <style>
                     body { font-family: Arial, sans-serif; margin: 20px; }
                     h1 { color: #2d3748; font-size: 24px; margin-bottom: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px; font-size: 10px; }
-                    td { border: 1px solid #e2e8f0; padding: 6px; font-size: 9px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 9px; }
+                    th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 6px; }
+                    td { border: 1px solid #e2e8f0; padding: 4px; }
                     .money { text-align: right; }
                     .percent { text-align: right; }
                     .footer { margin-top: 20px; font-size: 10px; color: #718096; text-align: right; }
@@ -1599,7 +1674,7 @@ const Historico = {
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>Data</th>
+                            <th>Data/Hora</th>
                             <th>Cliente</th>
                             <th>Segmento</th>
                             <th>Tipo</th>
@@ -1620,7 +1695,8 @@ const Historico = {
             if (item.data) {
                 try {
                     const dataObj = new Date(item.data);
-                    dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                    dataFormatada = dataObj.toLocaleDateString('pt-BR') + ' ' + 
+                                   dataObj.toLocaleTimeString('pt-BR');
                 } catch (e) {
                     dataFormatada = item.data;
                 }
@@ -1687,6 +1763,15 @@ const Historico = {
     
     gerarPDFSimulacao: function(dados, itemResumido) {
         const sim = dados;
+        
+        let perfisParaPDF = [];
+        if (sim.perfis && sim.perfis.length > 0) {
+            perfisParaPDF = sim.perfis;
+        } else if (sim.input && sim.input.perfis) {
+            perfisParaPDF = sim.input.perfis;
+        } else {
+            perfisParaPDF = [{ nome: 'Pl', horas: 80 }, { nome: 'Jr', horas: 40 }];
+        }
         
         let htmlContent = `
             <html>
@@ -1755,6 +1840,7 @@ const Historico = {
                     <h1>📊 MFBD Precificação Estratégica</h1>
                     <h2>Simulação Comercial</h2>
                     <div class="data">Gerado em: ${new Date().toLocaleString('pt-BR')}</div>
+                    <div class="data">ID: ${itemResumido.id}</div>
                 </div>
                 
                 <div class="section">
@@ -1802,13 +1888,11 @@ const Historico = {
                             <tr><th>Perfil</th><th>Horas</th><th>Custo/Hora</th><th>Total</th></tr>
         `;
         
-        if (sim.perfis && sim.perfis.length > 0) {
-            sim.perfis.forEach(p => {
-                const custoHora = p.custoHora || 0;
-                const custoTotal = (p.horas || 0) * custoHora;
-                htmlContent += `<tr><td>${p.nome}</td><td>${p.horas || 0}h</td><td>${Utils.formatarMoeda(custoHora)}</td><td>${Utils.formatarMoeda(custoTotal)}</td></tr>`;
-            });
-        }
+        perfisParaPDF.forEach(p => {
+            const custoHora = p.custoHora || (p.nome === 'Pl' ? 73.33 : 53.33);
+            const custoTotal = (p.horas || 0) * custoHora;
+            htmlContent += `<tr><td>${p.nome}</td><td>${p.horas || 0}h</td><td>${Utils.formatarMoeda(custoHora)}</td><td>${Utils.formatarMoeda(custoTotal)}</td></tr>`;
+        });
         
         htmlContent += `
                         </table>
@@ -1879,29 +1963,14 @@ const Historico = {
                     const btnCancelar = document.getElementById('btnCancelar');
                     if (btnCancelar) btnCancelar.style.display = 'inline-flex';
                     
-                    const campoCliente = document.getElementById('cliente_nome');
-                    if (campoCliente) campoCliente.value = sim.input?.cliente || '';
-                    
-                    const campoSegmento = document.getElementById('segmento');
-                    if (campoSegmento) campoSegmento.value = sim.input?.segmento || '';
-                    
-                    const campoTipo = document.getElementById('tipo_cliente');
-                    if (campoTipo) campoTipo.value = sim.input?.tipo || 'Novo';
-                    
-                    const campoRisco = document.getElementById('risco_inadimplencia');
-                    if (campoRisco) campoRisco.value = sim.input?.risco || 'Médio';
-                    
-                    const campoProduto = document.getElementById('produto');
-                    if (campoProduto) campoProduto.value = sim.input?.produto || 'Consultoria Estratégica';
-                    
-                    const campoEscopo = document.getElementById('escopo');
-                    if (campoEscopo) campoEscopo.value = sim.input?.escopo || '';
-                    
-                    const campoComplexidade = document.getElementById('complexidade');
-                    if (campoComplexidade) campoComplexidade.value = sim.input?.complexidade || 'Média';
-                    
-                    const campoUrgencia = document.getElementById('urgencia');
-                    if (campoUrgencia) campoUrgencia.value = sim.input?.urgencia || 'Normal';
+                    document.getElementById('cliente_nome').value = sim.input?.cliente || '';
+                    document.getElementById('segmento').value = sim.input?.segmento || '';
+                    document.getElementById('tipo_cliente').value = sim.input?.tipo || 'Novo';
+                    document.getElementById('risco_inadimplencia').value = sim.input?.risco || 'Médio';
+                    document.getElementById('produto').value = sim.input?.produto || 'Consultoria Estratégica';
+                    document.getElementById('escopo').value = sim.input?.escopo || '';
+                    document.getElementById('complexidade').value = sim.input?.complexidade || 'Média';
+                    document.getElementById('urgencia').value = sim.input?.urgencia || 'Normal';
                     
                     document.querySelectorAll('input[name="modelo_cobranca"]').forEach(radio => {
                         if (radio.value === sim.input?.modeloCobranca) {
@@ -1909,39 +1978,25 @@ const Historico = {
                         }
                     });
                     
-                    const campoEntrada = document.getElementById('entrada');
-                    if (campoEntrada) campoEntrada.value = sim.input?.entrada || 30;
-                    
-                    const campoParcelas = document.getElementById('parcelas');
-                    if (campoParcelas) campoParcelas.value = sim.input?.parcelas || 6;
-                    
-                    const campoDesconto = document.getElementById('desconto');
-                    if (campoDesconto) campoDesconto.value = sim.input?.desconto || 0;
-                    
-                    const campoTemParceiro = document.getElementById('tem_parceiro');
-                    if (campoTemParceiro) campoTemParceiro.value = sim.input?.temParceiro || 'nao';
+                    document.getElementById('entrada').value = sim.input?.entrada || 30;
+                    document.getElementById('parcelas').value = sim.input?.parcelas || 6;
+                    document.getElementById('desconto').value = sim.input?.desconto || 0;
+                    document.getElementById('tem_parceiro').value = sim.input?.temParceiro || 'nao';
                     
                     if (sim.input?.temParceiro === 'sim') {
-                        const parceiroGroup = document.getElementById('parceiro-group');
-                        if (parceiroGroup) parceiroGroup.style.display = 'block';
-                        const campoPercParceiro = document.getElementById('percentual_parceiro');
-                        if (campoPercParceiro) campoPercParceiro.value = sim.input?.percentualParceiro || 10;
+                        document.getElementById('parceiro-group').style.display = 'block';
+                        document.getElementById('percentual_parceiro').value = sim.input?.percentualParceiro || 10;
                     } else {
-                        const parceiroGroup = document.getElementById('parceiro-group');
-                        if (parceiroGroup) parceiroGroup.style.display = 'none';
+                        document.getElementById('parceiro-group').style.display = 'none';
                     }
                     
-                    const campoAplicaCS = document.getElementById('aplica_cs');
-                    if (campoAplicaCS) campoAplicaCS.value = sim.input?.aplicaCS || 'sim';
+                    document.getElementById('aplica_cs').value = sim.input?.aplicaCS || 'sim';
                     
                     if (sim.input?.aplicaCS === 'sim') {
-                        const csGroup = document.getElementById('cs-group');
-                        if (csGroup) csGroup.style.display = 'block';
-                        const campoPercCS = document.getElementById('percentual_cs');
-                        if (campoPercCS) campoPercCS.value = sim.input?.percentualCS || 7.5;
+                        document.getElementById('cs-group').style.display = 'block';
+                        document.getElementById('percentual_cs').value = sim.input?.percentualCS || 7.5;
                     } else {
-                        const csGroup = document.getElementById('cs-group');
-                        if (csGroup) csGroup.style.display = 'none';
+                        document.getElementById('cs-group').style.display = 'none';
                     }
                     
                     const container = document.getElementById('perfis-container');
@@ -1968,11 +2023,10 @@ const Historico = {
                                 container.appendChild(newRow);
                             });
                         } else {
-                            // Adicionar dois perfis padrão
                             const row1 = document.createElement('div');
                             row1.className = 'perfil-row';
                             row1.innerHTML = `
-                                <select class="perfil-nome"><option value="Pl" selected>Pl</option><option value="Jr">Jr</option><option value="Sr">Sr</option></select>
+                                <select class="perfil-nome"><option value="Pl" selected>Pl</option></select>
                                 <input type="number" class="perfil-horas" value="80" min="0" step="1">
                                 <input type="text" class="perfil-buffer" readonly value="20%">
                                 <button type="button" class="btn-danger" onclick="Perfis.remover(this)">🗑️</button>
@@ -1982,7 +2036,7 @@ const Historico = {
                             const row2 = document.createElement('div');
                             row2.className = 'perfil-row';
                             row2.innerHTML = `
-                                <select class="perfil-nome"><option value="Jr" selected>Jr</option><option value="Pl">Pl</option><option value="Sr">Sr</option></select>
+                                <select class="perfil-nome"><option value="Jr" selected>Jr</option></select>
                                 <input type="number" class="perfil-horas" value="40" min="0" step="1">
                                 <input type="text" class="perfil-buffer" readonly value="20%">
                                 <button type="button" class="btn-danger" onclick="Perfis.remover(this)">🗑️</button>
@@ -2040,7 +2094,16 @@ const Historico = {
             elemento.className = `status-badge status-${novoStatus.toLowerCase()}`;
             Utils.mostrarNotificacao(`Status alterado para ${novoStatus}`, 'success');
             
-            // Aqui você pode adicionar lógica para salvar o status alterado no backend
+            fetch(GOOGLE_SHEETS_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'atualizarStatus',
+                    id: id,
+                    status: novoStatus
+                })
+            });
         }
     }
 };
@@ -2089,7 +2152,6 @@ const Utils = {
     },
     
     mostrarNotificacao: function(mensagem, tipo = 'success') {
-        // Remover notificações existentes
         const notificacoesExistentes = document.querySelectorAll('.notification');
         notificacoesExistentes.forEach(n => n.remove());
         
@@ -2126,7 +2188,6 @@ const Utils = {
 // INICIALIZAÇÃO
 // ===========================================
 document.addEventListener('DOMContentLoaded', function() {
-    // Expor objetos globalmente para onclick
     window.Login = Login;
     window.UI = UI;
     window.Perfis = Perfis;

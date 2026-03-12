@@ -184,7 +184,7 @@
                 
                 <div class="form-group">
                     <label>Senha</label>
-                    <input type="password" id="loginSenha" placeholder="••••••••" value="admin123">
+                    <input type="password" id="loginSenha" placeholder="******" value="admin123">
                 </div>
                 
                 <button type="button" id="loginButton" onclick="Login.entrar()">
@@ -194,13 +194,12 @@
             </div>
             
             <div class="login-footer">
-                <p>Usuário padrão: admin@exemplo.com / admin123</p>
-                <p style="margin-top: 5px;">Os usuários podem ser cadastrados na aba "CadastroLogin" da planilha</p>
+                <p>Use admin@exemplo.com / admin123</p>
             </div>
         </div>
     </div>
     
-    <!-- Conteúdo Principal (protegido por login) -->
+    <!-- Conteúdo Principal -->
     <div id="mainContent" class="main-content">
         <div class="container">
             <div class="header">
@@ -650,15 +649,7 @@
                 </div>
 
                 <div class="action-bar mt-4">
-                    <button type="button" class="btn btn-success" onclick="Tabelas.atualizarESalvar()">
-                        💾 Salvar Parâmetros na Planilha
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="Tabelas.carregar()">
-                        🔄 Recarregar da Planilha
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="Tabelas.atualizar()">
-                        📊 Atualizar Frontend Apenas
-                    </button>
+                    <button type="button" class="btn btn-primary" onclick="Tabelas.atualizarESalvar()">🔄 Salvar Parâmetros</button>
                 </div>
             </div>
 
@@ -925,24 +916,24 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Data/Hora</th>
-                                <th>Cliente</th>
-                                <th>Segmento</th>
-                                <th>Tipo</th>
-                                <th>Risco</th>
-                                <th>Produto</th>
-                                <th>Modelo</th>
-                                <th>Preço Alvo</th>
-                                <th>Custo Total</th>
-                                <th>Margem %</th>
-                                <th>Status</th>
-                                <th>Ações</th>
+                               <th>ID</th>
+                <th>Data/Hora</th>
+                <th>Cliente</th>
+                <th>Segmento</th>
+                <th>Tipo</th>
+                <th>Risco</th>
+                <th>Produto</th>
+                <th>Modelo</th>
+                <th>Preço Alvo</th>
+                <th>Custo Total</th>
+                <th>Margem %</th>
+                <th>Status</th>
+                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody id="historico-lista">
                             <tr>
-                                <td colspan="13" style="text-align: center; padding: 40px;">
+                                <td colspan="14" style="text-align: center; padding: 40px;">
                                     <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
                                         <span style="font-size: 48px;">📊</span>
                                         <span style="font-size: 16px; color: #718096;">Clique em "Sincronizar" para carregar os dados</span>
