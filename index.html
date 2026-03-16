@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>SmartPrice - Precificação Inteligente</title>
+    <title>MFBD - Precificação Inteligente</title>
     <style>
         /* SEU CSS EXISTENTE PERMANECE IGUAL */
         * {
@@ -619,8 +619,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎯 SmartPrice PRO</h1>
-            <p>Precificação Inteligente • v2.0 • Integração Google Sheets</p>
+            <h1> MFBD </h1>
+            <p>Precificação Inteligente • v5.0 • Integração Google Sheets</p>
         </div>
 
         <div class="tabs">
@@ -631,7 +631,7 @@
             <button class="tab" onclick="showTab('historico')">📚 HISTÓRICO</button>
         </div>
 
-        <!-- ABA 1 - INPUT (exatamente como solicitado) -->
+        <!-- ABA 1 - INPUT -->
         <div id="input" class="tab-content active">
             <h2>📝 Dados do Cliente e Negócio</h2>
             
@@ -640,7 +640,7 @@
                     <h3>Cliente / Negócio</h3>
                     <div class="form-group">
                         <label>Cliente (nome)</label>
-                        <input type="text" id="cliente" placeholder="Ex: Empresa XYZ" value="Cliente Exemplo">
+                        <input type="text" id="cliente" placeholder="Ex: Empresa XYZ" value="">
                     </div>
                     <div class="form-group">
                         <label>Segmento</label>
@@ -696,7 +696,7 @@
                     </div>
                     <div class="form-group">
                         <label>Escopo (texto curto)</label>
-                        <textarea id="escopo" rows="2" placeholder="Descreva o escopo do serviço...">Desenvolvimento de sistema web</textarea>
+                        <textarea id="escopo" rows="2" placeholder="Descreva o escopo do serviço..."></textarea>
                     </div>
                     <div class="grid-2">
                         <div class="form-group">
@@ -1082,7 +1082,7 @@
             </div>
         </div>
 
-        <!-- ABA 5 - HISTÓRICO -->
+        <!-- ABA 5 - HISTÓRICO ATUALIZADO (SEM EXPORTAR JSON E TESTAR GOOGLE SHEETS) -->
         <div id="historico" class="tab-content">
             <h2>📚 Histórico de Simulações</h2>
             
@@ -1105,9 +1105,17 @@
                 
                 <div id="historico-lista"></div>
                 
-                <div class="button-group">
-                    <button class="btn btn-secondary" onclick="exportarHistorico()">📤 Exportar Histórico</button>
-                    <button class="btn btn-primary" onclick="testarConexaoGoogle()">🔌 Testar Google Sheets</button>
+                <div class="button-group" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 20px;">
+                    <button class="btn btn-success" onclick="exportarExcel()" title="Exportar para Excel">
+                        📊 Exportar Excel
+                    </button>
+                    <button class="btn btn-danger" onclick="exportarPDF()" title="Exportar para PDF">
+                        📑 Exportar PDF
+                    </button>
+                </div>
+                
+                <div style="margin-top: 10px; text-align: center;">
+                    <small style="color: #64748b;">Total de simulações: <span id="total-simulacoes">0</span></small>
                 </div>
             </div>
         </div>
@@ -1125,15 +1133,16 @@
     </div>
 
 <script>
-// ========== SISTEMA DE PRECIFICAÇÃO SMART PRICE PRO ==========
-// Versão 4.0 - Com exclusão/edição em TODAS as abas via Google Sheets
+// ========== SISTEMA DE PRECIFICAÇÃO MFBD ==========
+// Versão 5.0 - Com exclusão/edição em TODAS as abas via Google Sheets
+// Atualizado: Exportação Excel/PDF e limpeza automática
 
 let historico = JSON.parse(localStorage.getItem('historicoSmartPrice') || '[]');
 let indiceEditando = -1;
 
 // ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
 // SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycby6tKiQzL40gS7Qns11oT8fS4DwRq1w1pDUXa1mEZhH_4IqKyq07tzlyUO4fmoyfXV9/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw2K_O-V3YclzgfoQ9mOgx-N_m69x6uAuYMXyYOc0kbuLjRXsbH6ovfrA2VG3bEXV-5/exec';
 
 // ========== FUNÇÕES DE NOTIFICAÇÃO ==========
 function mostrarToast(mensagem, tipo = 'success') {
@@ -1497,12 +1506,8 @@ function calcular() {
         document.getElementById('composicao-margem').innerHTML = `R$ ${(precoAlvo - custoBase).toFixed(2)}`;
 
         // ===== PREPARAR DADOS COMPLETOS PARA SALVAR =====
-        // Coletar dados de TODAS as abas
         window.ultimoResultado = {
-            // Dados da ABA INPUT
             ...coletarDadosInput(),
-            
-            // Dados da ABA TABELAS
             margemHora: parseFloat(document.getElementById('margemHora')?.value) || 55,
             margemFechado: parseFloat(document.getElementById('margemFechado')?.value) || 47,
             margemRetainer: parseFloat(document.getElementById('margemRetainer')?.value) || 52,
@@ -1520,13 +1525,9 @@ function calcular() {
             bufferUrgencia: parseFloat(document.getElementById('bufferUrgencia')?.value) || 20,
             overheadTotal: overheadTotal,
             horasTotais: parseFloat(document.getElementById('horasTotais')?.value) || 840,
-            
-            // Dados da ABA CÁLCULO
             buffer: buffer,
             custoTotalMO: custoTotal,
             detalhamentoCalculo: detalhamento,
-            
-            // Dados da ABA OUTPUT
             preco: precoAlvo,
             precoPiso: precoPiso,
             precoPremium: precoPremium,
@@ -1541,8 +1542,6 @@ function calcular() {
             valorParcelas: valorParcelas,
             valorTotalJuros: valorTotalJuros,
             alertas: alertas.map(a => a.msg).join('; '),
-            
-            // Metadados
             id: indiceEditando !== -1 ? historico[indiceEditando].id : 'SP_' + new Date().getTime(),
             data: new Date().toLocaleString('pt-BR'),
             timestamp: new Date().toISOString(),
@@ -1559,191 +1558,132 @@ function calcular() {
     }
 }
 
-// ========== NOVAS FUNÇÕES PARA INTEGRAÇÃO COM GOOGLE SHEETS ==========
+// ========== FUNÇÕES PARA INTEGRAÇÃO COM GOOGLE SHEETS ==========
 
-// Função para excluir da nuvem
 async function excluirDaNuvem(id) {
     try {
         console.log('🗑️ Excluindo da nuvem ID:', id);
-        
         const response = await fetch(GOOGLE_SHEETS_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'excluirSimulacao',
-                id: id
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'excluirSimulacao', id: id })
         });
-        
         return true;
-        
     } catch(error) {
         console.error('❌ Erro ao excluir da nuvem:', error);
         return false;
     }
 }
 
-// Função para buscar da nuvem
 async function buscarDaNuvem(id) {
     try {
         console.log('🔍 Buscando da nuvem ID:', id);
-        
         const response = await fetch(GOOGLE_SHEETS_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'buscarSimulacao',
-                id: id
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'buscarSimulacao', id: id })
         });
-        
         return true;
-        
     } catch(error) {
         console.error('❌ Erro ao buscar da nuvem:', error);
         return false;
     }
 }
 
-// Função para listar simulações da nuvem
-async function listarSimulacoesNuvem() {
-    try {
-        const response = await fetch(GOOGLE_SHEETS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'listarSimulacoes'
-            })
-        });
-        
-        return true;
-        
-    } catch(error) {
-        console.error('❌ Erro ao listar da nuvem:', error);
-        return false;
-    }
-}
-
-// ========== FUNÇÃO PARA ENVIAR TODAS AS 5 ABAS PARA GOOGLE SHEETS ==========
 async function enviarTodasAbasParaPlanilha(dadosCompletos) {
     try {
-        console.log('📤 Enviando dados COMPLETOS (5 abas) para planilha:', dadosCompletos.cliente);
-        
-        const dadosEnvio = {
-            action: 'salvarCompleto',
-            dados: dadosCompletos
-        };
-        
+        console.log('📤 Enviando dados para planilha:', dadosCompletos.cliente);
+        const dadosEnvio = { action: 'salvarCompleto', dados: dadosCompletos };
         const response = await fetch(GOOGLE_SHEETS_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dadosEnvio)
         });
-        
-        console.log('✅ Requisição enviada - 5 abas salvas na planilha');
+        console.log('✅ Requisição enviada');
         return true;
-        
     } catch(error) {
-        console.error('❌ Erro ao enviar para planilha:', error);
+        console.error('❌ Erro ao enviar:', error);
         return false;
     }
 }
 
-// ========== FUNÇÃO PARA TESTAR CONEXÃO ==========
 async function testarConexaoGoogle() {
     try {
-        console.log('🔄 Testando conexão com Google Sheets...');
-        
+        console.log('🔄 Testando conexão...');
         mostrarToast('Testando conexão...', 'warning');
-        
         const response = await fetch(GOOGLE_SHEETS_URL, {
             method: 'POST',
             mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'testarConexao'
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'testarConexao' })
         });
-        
-        mostrarToast('✅ Conexão estabelecida! A planilha está pronta.', 'success');
+        mostrarToast('✅ Conexão estabelecida!', 'success');
         return true;
-        
     } catch(error) {
-        console.error('❌ Erro ao testar conexão:', error);
-        mostrarToast('❌ Falha na conexão: ' + error.message, 'error');
+        console.error('❌ Erro:', error);
+        mostrarToast('❌ Falha na conexão', 'error');
         return false;
     }
 }
 
-// ========== FUNÇÃO DE SALVAR NO HISTÓRICO (ATUALIZADA) ==========
+// ========== FUNÇÃO DE LIMPEZA DE CAMPOS ==========
+function limparCamposAposEnvio() {
+    const campoCliente = document.getElementById('cliente');
+    if (campoCliente) campoCliente.value = '';
+    
+    const campoEscopo = document.getElementById('escopo');
+    if (campoEscopo) campoEscopo.value = '';
+    
+    showTab('input');
+    console.log('🧹 Campos Cliente e Escopo limpos');
+}
+
+// ========== FUNÇÃO DE SALVAR NO HISTÓRICO ==========
 async function salvarHistorico(event) {
     if (!window.ultimoResultado) {
         mostrarToast('❌ Calcule um preço primeiro!', 'warning');
         return;
     }
     
-    // Mostrar loading no botão
     const btnSalvar = event?.target;
     const textoOriginal = btnSalvar?.innerHTML;
     if (btnSalvar) {
-        btnSalvar.innerHTML = '<span class="spinner"></span> Salvando 5 abas...';
+        btnSalvar.innerHTML = '<span class="spinner"></span> Salvando...';
         btnSalvar.disabled = true;
     }
     
     try {
         const isEditando = indiceEditando !== -1;
         
-        // 1. Atualizar ou adicionar no histórico local
         if (isEditando) {
             historico[indiceEditando] = window.ultimoResultado;
-            mostrarToast('✅ Simulação atualizada localmente', 'success');
+            mostrarToast('✅ Simulação atualizada', 'success');
         } else {
             historico.unshift(window.ultimoResultado);
-            mostrarToast('✅ Nova simulação salva localmente', 'success');
+            mostrarToast('✅ Nova simulação salva', 'success');
         }
         
-        // 2. Salvar no localStorage
         localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
         
-        // 3. Enviar para Google Sheets (TODAS AS 5 ABAS)
-        console.log('📤 Enviando TODAS AS 5 ABAS para Google Sheets...');
         const enviado = await enviarTodasAbasParaPlanilha(window.ultimoResultado);
         
         if (enviado) {
-            console.log('✅ Dados de todas as abas salvos na planilha');
-            mostrarToast('✅ Todas as 5 abas salvas no Google Sheets!', 'success');
+            mostrarToast('✅ Dados salvos no Google Sheets!', 'success');
+            limparCamposAposEnvio();
         } else {
-            console.warn('⚠️ Dados salvos localmente, falha no envio para planilha');
-            mostrarToast('⚠️ Salvo localmente, falha na sincronização com Google Sheets', 'warning');
+            mostrarToast('⚠️ Salvo localmente, falha na nuvem', 'warning');
         }
         
-        // 4. Reset do índice de edição
-        if (isEditando) {
-            indiceEditando = -1;
-        }
-        
-        // 5. Atualizar histórico
+        if (isEditando) indiceEditando = -1;
         atualizarHistorico();
         
     } catch (error) {
-        console.error('❌ Erro ao salvar:', error);
-        mostrarToast('❌ Erro ao salvar: ' + error.message, 'error');
+        console.error('❌ Erro:', error);
+        mostrarToast('❌ Erro ao salvar', 'error');
     } finally {
-        // Restaurar botão
         if (btnSalvar) {
             btnSalvar.innerHTML = textoOriginal;
             btnSalvar.disabled = false;
@@ -1751,65 +1691,124 @@ async function salvarHistorico(event) {
     }
 }
 
-// ========== FUNÇÕES DO HISTÓRICO ATUALIZADAS ==========
+// ========== FUNÇÕES DE EXPORTAÇÃO ==========
 
-// Função de editar atualizada
+function exportarExcel() {
+    try {
+        if (historico.length === 0) {
+            mostrarToast('📭 Nenhum dado para exportar', 'warning');
+            return;
+        }
+        
+        const cabecalhos = ['ID', 'Data', 'Cliente', 'Produto', 'Preço (R$)', 'Margem (%)', 'Risco', 'Complexidade', 'Cobrança'];
+        const dados = historico.map(item => [
+            item.id || '', item.data || '', item.cliente || '', 
+            item.produtoTexto || item.produto || '', item.preco || 0, 
+            item.margem || 0, item.risco || '', item.complexidade || '', 
+            item.cobrancaTexto || item.cobranca || ''
+        ]);
+        
+        const conteudoCSV = [cabecalhos, ...dados].map(linha => linha.join(',')).join('\n');
+        const blob = new Blob(["\uFEFF" + conteudoCSV], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `historico_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        
+        mostrarToast('📊 Histórico exportado como CSV!', 'success');
+    } catch(error) {
+        console.error('Erro:', error);
+        mostrarToast('❌ Erro ao exportar', 'error');
+    }
+}
+
+function exportarPDF() {
+    try {
+        if (historico.length === 0) {
+            mostrarToast('📭 Nenhum dado para exportar', 'warning');
+            return;
+        }
+        
+        let conteudoHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>MFBD - Histórico</title>
+            <style>
+                body { font-family: Arial; margin: 20px; }
+                h1 { color: #1e293b; text-align: center; }
+                table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+                th { background: #1e293b; color: white; padding: 10px; }
+                td { border: 1px solid #e2e8f0; padding: 8px; }
+                .data { color: #64748b; text-align: right; }
+            </style>
+            </head>
+            <body>
+                <h1>MFBD - Precificação Inteligente</h1>
+                <p class="data">Exportado em: ${new Date().toLocaleString('pt-BR')}</p>
+                <p>Total de simulações: ${historico.length}</p>
+                <table>
+                    <tr><th>Cliente</th><th>Produto</th><th>Preço</th><th>Margem</th><th>Risco</th><th>Data</th></tr>
+        `;
+        
+        historico.forEach(item => {
+            conteudoHTML += `<tr>
+                <td>${item.cliente || ''}</td>
+                <td>${item.produtoTexto || item.produto || ''}</td>
+                <td>R$ ${(item.preco || 0).toFixed(2)}</td>
+                <td>${item.margem || 0}%</td>
+                <td>${item.risco || ''}</td>
+                <td>${item.data || ''}</td>
+            </tr>`;
+        });
+        
+        conteudoHTML += '</table></body></html>';
+        
+        const blob = new Blob([conteudoHTML], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `historico_${new Date().toISOString().split('T')[0]}.html`;
+        link.click();
+        
+        mostrarToast('📑 Histórico exportado como HTML!', 'success');
+        
+        if (confirm('Abrir para impressão?')) {
+            const janela = window.open('', '_blank');
+            janela.document.write(conteudoHTML);
+            janela.document.close();
+            janela.print();
+        }
+    } catch(error) {
+        console.error('Erro:', error);
+        mostrarToast('❌ Erro ao exportar', 'error');
+    }
+}
+
+// ========== FUNÇÕES DO HISTÓRICO ==========
+
 function editarItem(indiceReal) {
     const item = historico[indiceReal];
-    
     if (item) {
         indiceEditando = indiceReal;
         preencherInputComDados(item);
         showTab('input');
         fecharModal();
-        
         mostrarToast(`✏️ Editando: ${item.cliente}`, 'warning');
-        mostrarToast('⚠️ Ao salvar, a nuvem será atualizada', 'warning');
     }
 }
 
-// Função de excluir atualizada
 async function excluirItem(indiceReal) {
     const item = historico[indiceReal];
-    
-    if (confirm(`🗑️ Tem certeza que deseja excluir "${item.cliente}"?\n\nIsso irá remover de TODAS as abas na planilha!`)) {
-        
-        // Mostrar loading
-        mostrarToast('Excluindo de todas as abas...', 'warning');
-        
-        // Excluir da nuvem
+    if (confirm(`🗑️ Excluir "${item.cliente}" de TODAS as abas?`)) {
+        mostrarToast('Excluindo...', 'warning');
         const excluidoNuvem = await excluirDaNuvem(item.id);
         
-        if (excluidoNuvem) {
-            mostrarToast('✅ Excluído da nuvem com sucesso!', 'success');
-        } else {
-            mostrarToast('⚠️ Falha ao excluir da nuvem', 'warning');
-        }
+        if (excluidoNuvem) mostrarToast('✅ Excluído da nuvem', 'success');
+        else mostrarToast('⚠️ Falha na nuvem', 'warning');
         
-        // Excluir localmente
         historico.splice(indiceReal, 1);
         localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
         atualizarHistorico();
-        
-        if (indiceEditando === indiceReal) {
-            indiceEditando = -1;
-        }
-        
         fecharModal();
-    }
-}
-
-// Função para sincronizar com a nuvem
-async function sincronizarComNuvem() {
-    mostrarToast('Sincronizando com a nuvem...', 'warning');
-    
-    try {
-        // Aqui você pode implementar a lógica de buscar dados da nuvem
-        // e mesclar com o histórico local
-        
-        mostrarToast('✅ Sincronização concluída!', 'success');
-    } catch(error) {
-        mostrarToast('❌ Erro na sincronização', 'error');
     }
 }
 
@@ -1846,12 +1845,10 @@ function atualizarHistorico() {
     const filtro = document.getElementById('filtroCliente')?.value?.toLowerCase() || '';
     const ordenar = document.getElementById('ordenarPor')?.value || 'data';
     
-    // Filtrar
     let historicoFiltrado = historico.filter(item => 
         item.cliente && item.cliente.toLowerCase().includes(filtro)
     );
     
-    // Ordenar
     if (ordenar === 'data') {
         historicoFiltrado.sort((a, b) => new Date(b.data) - new Date(a.data));
     } else if (ordenar === 'cliente') {
@@ -1863,6 +1860,7 @@ function atualizarHistorico() {
     }
     
     lista.innerHTML = '';
+    document.getElementById('total-simulacoes').textContent = historicoFiltrado.length;
     
     if (historicoFiltrado.length === 0) {
         lista.innerHTML = '<p class="text-center" style="padding: 40px;">📭 Nenhuma simulação encontrada</p>';
@@ -1871,7 +1869,6 @@ function atualizarHistorico() {
     
     historicoFiltrado.forEach(item => {
         const indiceReal = historico.findIndex(h => h.id === item.id);
-        
         if (indiceReal === -1) return;
         
         const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
@@ -1883,23 +1880,23 @@ function atualizarHistorico() {
                 <div class="historico-header">
                     <span class="historico-titulo">
                         ${item.cliente}
-                        ${isRecent ? '<span style="background:#3b82f6; color:white; padding:2px 8px; border-radius:12px; font-size:10px; margin-left:8px;">🆕 Recente</span>' : ''}
-                        <span style="font-size:10px; margin-left:5px; color:#64748b;">${item.id}</span>
+                        ${isRecent ? '<span style="background:#3b82f6; color:white; padding:2px 8px; border-radius:12px; font-size:10px;">🆕 Recente</span>' : ''}
+                        <span style="font-size:10px; color:#64748b;">${item.id}</span>
                     </span>
                     <div class="historico-acoes" onclick="event.stopPropagation()">
-                        <button style="background:#f59e0b; color:white; border:none; width:36px; height:36px; border-radius:18px; cursor:pointer;" onclick="editarItem(${indiceReal})" title="Editar">✏️</button>
-                        <button style="background:#ef4444; color:white; border:none; width:36px; height:36px; border-radius:18px; cursor:pointer;" onclick="excluirItem(${indiceReal})" title="Excluir">🗑️</button>
+                        <button style="background:#f59e0b; color:white;" onclick="editarItem(${indiceReal})">✏️</button>
+                        <button style="background:#ef4444; color:white;" onclick="excluirItem(${indiceReal})">🗑️</button>
                     </div>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px;">
+                <div style="display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 10px;">
                     <div><small>Produto</small><br><strong>${item.produtoTexto || item.produto}</strong></div>
                     <div><small>Preço</small><br><strong>R$ ${item.preco.toFixed(2)}</strong></div>
                     <div><small>Margem</small><br><strong>${item.margem}%</strong></div>
                     <div><small>Risco</small><br><span class="badge ${riscoClass}">${riscoLabel}</span></div>
                 </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 8px; display: flex; justify-content: space-between;">
+                <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
                     <span>${item.data}</span>
-                    ${isRecent ? '<span style="color:#3b82f6;">⬆️ Último</span>' : ''}
+                    ${isRecent ? '<span style="color:#3b82f6; float:right;">⬆️ Último</span>' : ''}
                 </div>
             </div>
         `;
@@ -1909,34 +1906,18 @@ function atualizarHistorico() {
 function exportarHistorico() {
     const dataStr = JSON.stringify(historico, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
     const link = document.createElement('a');
-    link.setAttribute('href', dataUri);
-    link.setAttribute('download', `historico_${new Date().toISOString().split('T')[0]}.json`);
+    link.href = dataUri;
+    link.download = `historico_${new Date().toISOString().split('T')[0]}.json`;
     link.click();
-    
-    mostrarToast('📤 Histórico exportado com sucesso!', 'success');
-}
-
-// ========== FUNÇÃO PARA LIMPAR TUDO ==========
-function limparTudo() {
-    if (confirm('⚠️ TEM CERTEZA? Isso irá apagar TODAS as simulações do histórico LOCAL!')) {
-        historico = [];
-        localStorage.removeItem('historicoSmartPrice');
-        atualizarHistorico();
-        mostrarToast('🗑️ Histórico local limpo!', 'success');
-    }
+    mostrarToast('📤 Histórico exportado!', 'success');
 }
 
 // ========== INICIALIZAÇÃO ==========
 window.onload = function() {
-    // Ordenar histórico por data (mais recente primeiro)
     historico.sort((a, b) => new Date(b.data) - new Date(a.data));
-    
-    // Adicionar primeiro perfil
     adicionarPerfil();
     
-    // Configurar radios
     document.querySelectorAll('.radio-option').forEach(option => {
         option.addEventListener('click', function() {
             const radio = this.querySelector('input[type="radio"]');
@@ -1946,7 +1927,6 @@ window.onload = function() {
         });
     });
     
-    // Função para atualizar custos
     function atualizarTodosCustos() {
         const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
         const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
@@ -1976,52 +1956,33 @@ window.onload = function() {
         });
     }
     
-    // Adicionar listeners para atualização automática
     const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
     perfis.forEach(perfil => {
         const salario = document.getElementById(`salario${perfil}`);
         const beneficios = document.getElementById(`beneficios${perfil}`);
         const horas = document.getElementById(`horas${perfil}`);
-        
         if (salario) salario.addEventListener('input', atualizarTodosCustos);
         if (beneficios) beneficios.addEventListener('input', atualizarTodosCustos);
         if (horas) horas.addEventListener('input', atualizarTodosCustos);
     });
     
-    const overheadTotal = document.getElementById('overheadTotal');
-    const horasTotais = document.getElementById('horasTotais');
+    document.getElementById('overheadTotal')?.addEventListener('input', atualizarTodosCustos);
+    document.getElementById('horasTotais')?.addEventListener('input', atualizarTodosCustos);
     
-    if (overheadTotal) overheadTotal.addEventListener('input', atualizarTodosCustos);
-    if (horasTotais) horasTotais.addEventListener('input', atualizarTodosCustos);
-    
-    // Inicializar custos
     atualizarTodosCustos();
     
-    // Configurar filtros do histórico
-    const filtroCliente = document.getElementById('filtroCliente');
-    const ordenarPor = document.getElementById('ordenarPor');
+    document.getElementById('filtroCliente')?.addEventListener('input', atualizarHistorico);
+    document.getElementById('ordenarPor')?.addEventListener('change', atualizarHistorico);
     
-    if (filtroCliente) filtroCliente.addEventListener('input', atualizarHistorico);
-    if (ordenarPor) ordenarPor.addEventListener('change', atualizarHistorico);
-    
-    // Fechar modal ao clicar fora
     window.addEventListener('click', (event) => {
-        const modal = document.getElementById('modalEdicao');
-        if (event.target === modal) fecharModal();
+        if (event.target === document.getElementById('modalEdicao')) fecharModal();
     });
     
-    // Atualizar histórico
     atualizarHistorico();
     indiceEditando = -1;
     
-    // Verificar conexão com Google Sheets
-    console.log('✅ SmartPrice PRO - Sistema carregado');
-    console.log('🌐 Google Sheets URL configurada:', GOOGLE_SHEETS_URL ? '✅ OK' : '❌ Não configurada');
-    console.log('📊 Modo: Salvando TODAS AS 5 ABAS na planilha');
-    console.log('🆕 Novo: Exclusão e edição em todas as abas via ID');
-    
-    // Mostrar boas-vindas
-    mostrarToast('🚀 SmartPrice PRO v4.0 - Exclusão/Edição na nuvem!', 'success');
+    console.log('✅ MFBD - Sistema carregado v5.0');
+    mostrarToast('🚀 MFBD v5.0 - Pronto!', 'success');
 };
 </script>
 </body>
