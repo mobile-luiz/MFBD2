@@ -7,7 +7,7 @@
 // ===========================================
 // CONFIGURAÇÕES
 // ===========================================
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxZ_cX9V39x4rWzJp_B6oONvm6i16qI-lXn3Apc80B7mRN7woBRxlctyv6oTDieWPNToQ/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxxPG4sR7Ta27KSGyK2ENb63rYKaMGFmilRWozgirWFjBVtr3e0z3Xb1uSZLRmzjdjgEg/exec';
 
 // ===========================================
 // VARIÁVEIS GLOBAIS
