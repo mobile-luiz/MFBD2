@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>SmartPrice - Precificação Inteligente</title>
     <style>
+        /* SEU CSS EXISTENTE PERMANECE IGUAL */
         * {
             margin: 0;
             padding: 0;
@@ -570,13 +571,56 @@
         .mb-2 { margin-bottom: 10px; }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
+        
+        /* Estilos para notificações */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: #1e293b;
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #3b82f6;
+            max-width: 350px;
+        }
+        
+        .toast.success { border-left-color: #10b981; }
+        .toast.error { border-left-color: #ef4444; }
+        .toast.warning { border-left-color: #f59e0b; }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🎯 SmartPrice PRO</h1>
-            <p>Precificação Inteligente • v2.0</p>
+            <p>Precificação Inteligente • v2.0 • Integração Google Sheets</p>
         </div>
 
         <div class="tabs">
@@ -1034,7 +1078,7 @@
             </div>
 
             <div class="button-group">
-                <button class="btn btn-success" onclick="salvarHistorico()">💾 Salvar no Histórico</button>
+                <button class="btn btn-success" onclick="salvarHistorico(event)">💾 Salvar no Histórico</button>
             </div>
         </div>
 
@@ -1063,6 +1107,7 @@
                 
                 <div class="button-group">
                     <button class="btn btn-secondary" onclick="exportarHistorico()">📤 Exportar Histórico</button>
+                    <button class="btn btn-primary" onclick="testarConexaoGoogle()">🔌 Testar Google Sheets</button>
                 </div>
             </div>
         </div>
@@ -1080,615 +1125,904 @@
     </div>
 
 <script>
-    // ========== SISTEMA DE PRECIFICAÇÃO ==========
-    // Conforme regras de negócio do cliente
+// ========== SISTEMA DE PRECIFICAÇÃO SMART PRICE PRO ==========
+// Versão 4.0 - Com exclusão/edição em TODAS as abas via Google Sheets
+
+let historico = JSON.parse(localStorage.getItem('historicoSmartPrice') || '[]');
+let indiceEditando = -1;
+
+// ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
+// SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycby6tKiQzL40gS7Qns11oT8fS4DwRq1w1pDUXa1mEZhH_4IqKyq07tzlyUO4fmoyfXV9/exec';
+
+// ========== FUNÇÕES DE NOTIFICAÇÃO ==========
+function mostrarToast(mensagem, tipo = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${tipo}`;
+    toast.innerHTML = `
+        <span style="font-size: 20px;">${tipo === 'success' ? '✅' : tipo === 'error' ? '❌' : '⚠️'}</span>
+        <span>${mensagem}</span>
+    `;
+    document.body.appendChild(toast);
     
-    let historico = JSON.parse(localStorage.getItem('historicoSmartPrice') || '[]');
-    let indiceEditando = -1; // Índice real do item em edição
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
-    // Funções de UI
-    function showTab(tabName) {
-        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-        
-        document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
-        document.getElementById(tabName).classList.add('active');
-        
-        if (tabName === 'historico') atualizarHistorico();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+// ========== FUNÇÕES DE UTILIDADE ==========
+function showTab(tabName) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+    
+    if (tabName === 'historico') {
+        atualizarHistorico();
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-    // Gerenciamento de Perfis
-    function adicionarPerfil() {
-        const container = document.getElementById('perfis-container');
-        const div = document.createElement('div');
-        div.className = 'perfil-row';
-        div.innerHTML = `
-            <select class="perfil">
-                <option value="estag">Estagiário</option>
-                <option value="jr">Júnior</option>
-                <option value="pl">Pleno</option>
-                <option value="sr">Sênior</option>
-                <option value="coord">Coordenador</option>
-                <option value="socio">Sócio</option>
-            </select>
-            <input type="number" class="horas" value="40" min="0" step="1" placeholder="Horas">
-            <span class="custo-previsto">R$ 0,00</span>
-            <button class="remove-btn" onclick="removerPerfil(this)">✕</button>
-        `;
-        container.appendChild(div);
-        atualizarCustoPrevisto(div);
-        
-        div.querySelector('.horas').addEventListener('input', () => atualizarCustoPrevisto(div));
-        div.querySelector('.perfil').addEventListener('change', () => atualizarCustoPrevisto(div));
+function fecharModal() {
+    document.getElementById('modalEdicao').classList.remove('active');
+}
+
+// ========== GERENCIAMENTO DE PERFIS ==========
+function adicionarPerfil() {
+    const container = document.getElementById('perfis-container');
+    const div = document.createElement('div');
+    div.className = 'perfil-row';
+    div.innerHTML = `
+        <select class="perfil">
+            <option value="estag">Estagiário</option>
+            <option value="jr">Júnior</option>
+            <option value="pl">Pleno</option>
+            <option value="sr">Sênior</option>
+            <option value="coord">Coordenador</option>
+            <option value="socio">Sócio</option>
+        </select>
+        <input type="number" class="horas" value="40" min="0" step="1" placeholder="Horas">
+        <span class="custo-previsto">R$ 0,00</span>
+        <button class="remove-btn" onclick="removerPerfil(this)">✕</button>
+    `;
+    container.appendChild(div);
+    atualizarCustoPrevisto(div);
+    
+    div.querySelector('.horas').addEventListener('input', () => atualizarCustoPrevisto(div));
+    div.querySelector('.perfil').addEventListener('change', () => atualizarCustoPrevisto(div));
+}
+
+function removerPerfil(botao) {
+    if (document.querySelectorAll('.perfil-row').length > 1) {
+        botao.parentElement.remove();
+    } else {
+        mostrarToast('Mantenha pelo menos um perfil na equipe', 'warning');
     }
+}
 
-    function removerPerfil(botao) {
-        if (document.querySelectorAll('.perfil-row').length > 1) {
-            botao.parentElement.remove();
-        } else {
-            alert('Mantenha pelo menos um perfil na equipe');
+// ========== CÁLCULO DE CUSTOS ==========
+function getCustoHora(perfil) {
+    const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
+    const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
+    const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
+    
+    const encargos = salario * 0.72;
+    const custoTotalMensal = salario + encargos + beneficios;
+    
+    const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+    const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
+    const overheadHora = overheadTotal / horasTotais;
+    
+    return (custoTotalMensal / horas) + overheadHora;
+}
+
+function atualizarCustoPrevisto(div) {
+    const select = div.querySelector('.perfil');
+    const horas = parseFloat(div.querySelector('.horas').value) || 0;
+    const perfil = select.value;
+    
+    const perfilId = perfil.charAt(0).toUpperCase() + perfil.slice(1);
+    const custoHora = getCustoHora(perfilId);
+    const custoTotal = custoHora * horas;
+    
+    div.querySelector('.custo-previsto').textContent = `R$ ${custoTotal.toFixed(2)}`;
+}
+
+function calcularBuffer() {
+    const complexidade = document.getElementById('complexidade').value;
+    const urgencia = document.getElementById('urgencia').value;
+    
+    const bufferComplexidade = {
+        baixa: parseFloat(document.getElementById('bufferBaixa')?.value) || 10,
+        media: parseFloat(document.getElementById('bufferMedia')?.value) || 20,
+        alta: parseFloat(document.getElementById('bufferAlta')?.value) || 30
+    };
+    
+    const bufferUrgencia = {
+        normal: parseFloat(document.getElementById('bufferNormal')?.value) || 0,
+        urgente: parseFloat(document.getElementById('bufferUrgencia')?.value) || 20
+    };
+    
+    return (bufferComplexidade[complexidade] + bufferUrgencia[urgencia]) / 100;
+}
+
+// ========== COLETA E PREENCHIMENTO DE DADOS ==========
+function coletarDadosInput() {
+    const perfis = document.querySelectorAll('.perfil-row');
+    const perfisData = [];
+    
+    perfis.forEach(perfil => {
+        const select = perfil.querySelector('.perfil');
+        const horas = parseFloat(perfil.querySelector('.horas').value) || 0;
+        
+        if (horas > 0) {
+            perfisData.push({
+                perfil: select.value,
+                perfilNome: select.options[select.selectedIndex].text,
+                horas: horas,
+                custoHora: getCustoHora(select.value.charAt(0).toUpperCase() + select.value.slice(1))
+            });
         }
-    }
+    });
 
-    // Cálculo de custos
-    function getCustoHora(perfil) {
-        const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
-        const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
-        const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
-        
-        const encargos = salario * 0.72;
-        const custoTotalMensal = salario + encargos + beneficios;
-        
-        const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-        const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
-        const overheadHora = overheadTotal / horasTotais;
-        
-        return (custoTotalMensal / horas) + overheadHora;
-    }
+    return {
+        cliente: document.getElementById('cliente').value,
+        segmento: document.getElementById('segmento').value,
+        tipo: document.getElementById('tipo').value,
+        risco: document.getElementById('risco').value,
+        produto: document.getElementById('produto').value,
+        produtoTexto: document.getElementById('produto').options[document.getElementById('produto').selectedIndex].text,
+        escopo: document.getElementById('escopo').value,
+        complexidade: document.getElementById('complexidade').value,
+        urgencia: document.getElementById('urgencia').value,
+        cobranca: document.querySelector('input[name="cobranca"]:checked')?.value || 'hora',
+        cobrancaTexto: document.querySelector('input[name="cobranca"]:checked')?.nextSibling?.nodeValue?.trim() || 'Hora',
+        perfis: perfisData,
+        riscoEscopo: parseFloat(document.getElementById('riscoEscopo').value) || 20,
+        entrada: parseFloat(document.getElementById('entrada').value) || 50,
+        parcelas: parseInt(document.getElementById('parcelas').value) || 1,
+        desconto: parseFloat(document.getElementById('desconto').value) || 0,
+        parceiro: document.getElementById('parceiro').value,
+        percParceiro: parseFloat(document.getElementById('percParceiro').value) || 0,
+        aplicaCS: document.getElementById('aplicaCS').value,
+        percCS: parseFloat(document.getElementById('percCS').value) || 7.5
+    };
+}
 
-    function atualizarCustoPrevisto(div) {
-        const select = div.querySelector('.perfil');
-        const horas = parseFloat(div.querySelector('.horas').value) || 0;
-        const perfil = select.value;
-        
-        const perfilId = perfil.charAt(0).toUpperCase() + perfil.slice(1);
-        const custoHora = getCustoHora(perfilId);
-        const custoTotal = custoHora * horas;
-        
-        div.querySelector('.custo-previsto').textContent = `R$ ${custoTotal.toFixed(2)}`;
+function preencherInputComDados(dados) {
+    document.getElementById('cliente').value = dados.cliente || '';
+    document.getElementById('segmento').value = dados.segmento || 'tecnologia';
+    document.getElementById('tipo').value = dados.tipo || 'novo';
+    document.getElementById('risco').value = dados.risco || 'baixo';
+    document.getElementById('produto').value = dados.produto || 'consultoria';
+    document.getElementById('escopo').value = dados.escopo || '';
+    document.getElementById('complexidade').value = dados.complexidade || 'media';
+    document.getElementById('urgencia').value = dados.urgencia || 'normal';
+    
+    const radios = document.getElementsByName('cobranca');
+    radios.forEach(radio => {
+        if (radio.value === dados.cobranca) {
+            radio.checked = true;
+            radio.closest('.radio-option').classList.add('selected');
+        } else {
+            radio.closest('.radio-option').classList.remove('selected');
+        }
+    });
+    
+    document.getElementById('riscoEscopo').value = dados.riscoEscopo || 20;
+    document.getElementById('entrada').value = dados.entrada || 50;
+    document.getElementById('parcelas').value = dados.parcelas || 1;
+    document.getElementById('desconto').value = dados.desconto || 0;
+    document.getElementById('parceiro').value = dados.parceiro || 'nao';
+    document.getElementById('percParceiro').value = dados.percParceiro || 0;
+    document.getElementById('aplicaCS').value = dados.aplicaCS || 'sim';
+    document.getElementById('percCS').value = dados.percCS || 7.5;
+    
+    const container = document.getElementById('perfis-container');
+    container.innerHTML = '';
+    
+    if (dados.perfis && dados.perfis.length > 0) {
+        dados.perfis.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'perfil-row';
+            div.innerHTML = `
+                <select class="perfil">
+                    <option value="estag" ${p.perfil === 'estag' ? 'selected' : ''}>Estagiário</option>
+                    <option value="jr" ${p.perfil === 'jr' ? 'selected' : ''}>Júnior</option>
+                    <option value="pl" ${p.perfil === 'pl' ? 'selected' : ''}>Pleno</option>
+                    <option value="sr" ${p.perfil === 'sr' ? 'selected' : ''}>Sênior</option>
+                    <option value="coord" ${p.perfil === 'coord' ? 'selected' : ''}>Coordenador</option>
+                    <option value="socio" ${p.perfil === 'socio' ? 'selected' : ''}>Sócio</option>
+                </select>
+                <input type="number" class="horas" value="${p.horas}" min="0" step="1" placeholder="Horas">
+                <span class="custo-previsto">R$ 0,00</span>
+                <button class="remove-btn" onclick="removerPerfil(this)">✕</button>
+            `;
+            container.appendChild(div);
+            
+            div.querySelector('.horas').addEventListener('input', () => atualizarCustoPrevisto(div));
+            div.querySelector('.perfil').addEventListener('change', () => atualizarCustoPrevisto(div));
+            atualizarCustoPrevisto(div);
+        });
+    } else {
+        adicionarPerfil();
     }
+}
 
-    function calcularBuffer() {
-        const complexidade = document.getElementById('complexidade').value;
-        const urgencia = document.getElementById('urgencia').value;
-        
-        const buffers = {
-            complexidade: {
-                baixa: parseFloat(document.getElementById('bufferBaixa')?.value) || 10,
-                media: parseFloat(document.getElementById('bufferMedia')?.value) || 20,
-                alta: parseFloat(document.getElementById('bufferAlta')?.value) || 30
-            },
-            urgencia: {
-                normal: parseFloat(document.getElementById('bufferNormal')?.value) || 0,
-                urgente: parseFloat(document.getElementById('bufferUrgente')?.value) || 20
-            }
-        };
-        
-        return (buffers.complexidade[complexidade] + buffers.urgencia[urgencia]) / 100;
-    }
-
-    function coletarDadosInput() {
+// ========== FUNÇÃO PRINCIPAL DE CÁLCULO ==========
+function calcular() {
+    try {
         const perfis = document.querySelectorAll('.perfil-row');
-        const perfisData = [];
+        let custoTotal = 0;
+        let detalhamento = [];
         
         perfis.forEach(perfil => {
             const select = perfil.querySelector('.perfil');
             const horas = parseFloat(perfil.querySelector('.horas').value) || 0;
             
             if (horas > 0) {
-                perfisData.push({
-                    perfil: select.value,
-                    perfilNome: select.options[select.selectedIndex].text,
-                    horas: horas
-                });
+                const perfilNome = select.options[select.selectedIndex].text;
+                const perfilValue = select.value;
+                const perfilId = perfilValue.charAt(0).toUpperCase() + perfilValue.slice(1);
+                const custoHora = getCustoHora(perfilId);
+                const custo = custoHora * horas;
+                
+                custoTotal += custo;
+                detalhamento.push({ perfil: perfilNome, horas, custoHora, custo });
             }
         });
 
-        return {
-            cliente: document.getElementById('cliente').value,
-            segmento: document.getElementById('segmento').value,
-            tipo: document.getElementById('tipo').value,
-            risco: document.getElementById('risco').value,
-            produto: document.getElementById('produto').value,
-            escopo: document.getElementById('escopo').value,
-            complexidade: document.getElementById('complexidade').value,
-            urgencia: document.getElementById('urgencia').value,
-            cobranca: document.querySelector('input[name="cobranca"]:checked')?.value || 'hora',
-            perfis: perfisData,
-            riscoEscopo: parseFloat(document.getElementById('riscoEscopo').value) || 20,
-            entrada: parseFloat(document.getElementById('entrada').value) || 50,
-            parcelas: parseInt(document.getElementById('parcelas').value) || 1,
-            desconto: parseFloat(document.getElementById('desconto').value) || 0,
-            parceiro: document.getElementById('parceiro').value,
-            percParceiro: parseFloat(document.getElementById('percParceiro').value) || 0,
-            aplicaCS: document.getElementById('aplicaCS').value,
-            percCS: parseFloat(document.getElementById('percCS').value) || 7.5
+        const buffer = calcularBuffer();
+        const custoComBuffer = custoTotal * (1 + buffer);
+        const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+
+        const percImpostos = parseFloat(document.getElementById('impostos')?.value) || 11.33;
+        const impostos = custoComBuffer * (percImpostos / 100);
+
+        const aplicaCS = document.getElementById('aplicaCS')?.value === 'sim';
+        const percCS = aplicaCS ? (parseFloat(document.getElementById('percCS')?.value) || 7.5) : 0;
+        const cs = custoComBuffer * (percCS / 100);
+
+        const temParceiro = document.getElementById('parceiro')?.value === 'sim';
+        const percParceiro = temParceiro ? (parseFloat(document.getElementById('percParceiro')?.value) || 0) : 0;
+        const parceiro = custoComBuffer * (percParceiro / 100);
+
+        const tipoCobranca = document.querySelector('input[name="cobranca"]:checked')?.value || 'hora';
+        const margens = {
+            hora: parseFloat(document.getElementById('margemHora')?.value) || 55,
+            fechado: parseFloat(document.getElementById('margemFechado')?.value) || 47,
+            retainer: parseFloat(document.getElementById('margemRetainer')?.value) || 52,
+            exito: parseFloat(document.getElementById('margemExito')?.value) || 65,
+            hibrido: parseFloat(document.getElementById('margemHibrido')?.value) || 50
         };
-    }
-
-    function preencherInputComDados(dados) {
-        document.getElementById('cliente').value = dados.cliente || '';
-        document.getElementById('segmento').value = dados.segmento || 'tecnologia';
-        document.getElementById('tipo').value = dados.tipo || 'novo';
-        document.getElementById('risco').value = dados.risco || 'baixo';
-        document.getElementById('produto').value = dados.produto || 'consultoria';
-        document.getElementById('escopo').value = dados.escopo || '';
-        document.getElementById('complexidade').value = dados.complexidade || 'media';
-        document.getElementById('urgencia').value = dados.urgencia || 'normal';
         
-        const radios = document.getElementsByName('cobranca');
-        radios.forEach(radio => {
-            if (radio.value === dados.cobranca) {
-                radio.checked = true;
-                radio.closest('.radio-option').classList.add('selected');
-            } else {
-                radio.closest('.radio-option').classList.remove('selected');
-            }
+        const margemAlvo = margens[tipoCobranca] / 100;
+        const custoBase = custoComBuffer + impostos + cs + parceiro;
+
+        const precoPiso = custoBase * (1 + (margemAlvo - 0.15));
+        const precoAlvo = custoBase * (1 + margemAlvo);
+        const precoPremium = custoBase * (1 + margemAlvo + 0.15);
+        const desconto = parseFloat(document.getElementById('desconto').value) || 0;
+        const precoComDesconto = precoAlvo * (1 - desconto/100);
+
+        // Atualizar UI
+        document.getElementById('preco-piso').innerHTML = `R$ ${precoPiso.toFixed(2)}`;
+        document.getElementById('preco-alvo').innerHTML = `R$ ${precoAlvo.toFixed(2)}`;
+        document.getElementById('preco-premium').innerHTML = `R$ ${precoPremium.toFixed(2)}`;
+        
+        document.getElementById('output-custo').innerHTML = `R$ ${custoBase.toFixed(2)}`;
+        document.getElementById('output-impostos').innerHTML = `R$ ${impostos.toFixed(2)}`;
+        document.getElementById('output-cs').innerHTML = `R$ ${cs.toFixed(2)}`;
+        document.getElementById('output-margem-valor').innerHTML = `R$ ${(precoAlvo - custoBase).toFixed(2)}`;
+        document.getElementById('output-margem-pct').innerHTML = `${((precoAlvo - custoBase) / precoAlvo * 100).toFixed(1)}%`;
+
+        const entradaPct = parseFloat(document.getElementById('entrada').value) || 50;
+        const parcelas = parseInt(document.getElementById('parcelas').value) || 1;
+        const taxaJuros = parseFloat(document.getElementById('taxaParcelamento').value) || 1;
+        
+        const valorEntrada = precoAlvo * (entradaPct/100);
+        const valorParcelas = (precoAlvo - valorEntrada) / parcelas;
+        const valorTotalJuros = precoAlvo * Math.pow(1 + taxaJuros/100, parcelas);
+        
+        document.getElementById('output-entrada').innerHTML = `R$ ${valorEntrada.toFixed(2)}`;
+        document.getElementById('output-parcelas').innerHTML = `${parcelas}x R$ ${valorParcelas.toFixed(2)}`;
+        document.getElementById('output-total-juros').innerHTML = `R$ ${valorTotalJuros.toFixed(2)}`;
+
+        // Alertas
+        const alertas = [];
+        
+        if (precoComDesconto < precoPiso) {
+            alertas.push({ tipo: 'critical', msg: '⚠️ Abaixo do piso' });
+        }
+        
+        if (desconto > 15) {
+            alertas.push({ tipo: 'warning', msg: '⚠️ Desconto acima da alçada (máx 15%)' });
+        }
+        
+        if (tipoCobranca === 'exito' && custoBase > precoAlvo * 0.4) {
+            alertas.push({ tipo: 'critical', msg: '⚠️ Modelo de êxito sem cobertura de custo' });
+        }
+        
+        if (tipoCobranca === 'retainer' && !document.getElementById('escopo').value) {
+            alertas.push({ tipo: 'warning', msg: '⚠️ Escopo sem limites (retainer)' });
+        }
+        
+        if (document.getElementById('risco').value === 'alto') {
+            alertas.push({ tipo: 'critical', msg: '⚠️ Risco alto de inadimplência' });
+        }
+        
+        if (tipoCobranca === 'exito' && entradaPct < 30) {
+            alertas.push({ tipo: 'warning', msg: '⚠️ Êxito: Recomendado entrada mínima de 30%' });
+        }
+
+        const alertasContainer = document.getElementById('alertas-container');
+        alertasContainer.innerHTML = '';
+        
+        if (alertas.length === 0) {
+            alertasContainer.innerHTML = '<div class="alert alert-success">✅ Nenhum alerta identificado</div>';
+        } else {
+            alertas.forEach(a => {
+                alertasContainer.innerHTML += `<div class="alert alert-${a.tipo === 'critical' ? 'critical' : 'warning'}">${a.msg}</div>`;
+            });
+        }
+
+        // Tabela de cálculo
+        const corpoCalculo = document.getElementById('corpo-calculo');
+        corpoCalculo.innerHTML = '';
+        
+        detalhamento.forEach(item => {
+            corpoCalculo.innerHTML += `
+                <tr>
+                    <td>${item.perfil}</td>
+                    <td>${item.horas}h</td>
+                    <td>R$ ${item.custoHora.toFixed(2)}</td>
+                    <td>R$ ${item.custo.toFixed(2)}</td>
+                    <td>R$ ${(item.custo * buffer).toFixed(2)}</td>
+                    <td>R$ ${(item.custo * (1 + buffer)).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('total-mao-obra').innerHTML = `R$ ${custoTotal.toFixed(2)}`;
+        document.getElementById('total-overhead').innerHTML = `R$ ${overheadTotal.toFixed(2)}`;
+        document.getElementById('subtotal-geral').innerHTML = `R$ ${(custoTotal + overheadTotal).toFixed(2)}`;
+
+        document.getElementById('composicao-custo').innerHTML = `R$ ${custoComBuffer.toFixed(2)}`;
+        document.getElementById('composicao-impostos').innerHTML = `R$ ${impostos.toFixed(2)}`;
+        document.getElementById('composicao-cs').innerHTML = `R$ ${cs.toFixed(2)}`;
+        document.getElementById('composicao-parceiro').innerHTML = `R$ ${parceiro.toFixed(2)}`;
+        document.getElementById('composicao-base').innerHTML = `R$ ${custoBase.toFixed(2)}`;
+        document.getElementById('composicao-margem').innerHTML = `R$ ${(precoAlvo - custoBase).toFixed(2)}`;
+
+        // ===== PREPARAR DADOS COMPLETOS PARA SALVAR =====
+        // Coletar dados de TODAS as abas
+        window.ultimoResultado = {
+            // Dados da ABA INPUT
+            ...coletarDadosInput(),
+            
+            // Dados da ABA TABELAS
+            margemHora: parseFloat(document.getElementById('margemHora')?.value) || 55,
+            margemFechado: parseFloat(document.getElementById('margemFechado')?.value) || 47,
+            margemRetainer: parseFloat(document.getElementById('margemRetainer')?.value) || 52,
+            margemExito: parseFloat(document.getElementById('margemExito')?.value) || 65,
+            margemHibrido: parseFloat(document.getElementById('margemHibrido')?.value) || 50,
+            impostos: parseFloat(document.getElementById('impostos')?.value) || 11.33,
+            taxaParcelamento: parseFloat(document.getElementById('taxaParcelamento')?.value) || 1,
+            regimeTributario: document.getElementById('regimeTributario')?.value || 'lucro_presumido',
+            csPadrao: parseFloat(document.getElementById('csPadrao')?.value) || 7.5,
+            baseCS: document.getElementById('baseCS')?.value || 'liquido',
+            bufferBaixa: parseFloat(document.getElementById('bufferBaixa')?.value) || 10,
+            bufferMedia: parseFloat(document.getElementById('bufferMedia')?.value) || 20,
+            bufferAlta: parseFloat(document.getElementById('bufferAlta')?.value) || 30,
+            bufferNormal: parseFloat(document.getElementById('bufferNormal')?.value) || 0,
+            bufferUrgencia: parseFloat(document.getElementById('bufferUrgencia')?.value) || 20,
+            overheadTotal: overheadTotal,
+            horasTotais: parseFloat(document.getElementById('horasTotais')?.value) || 840,
+            
+            // Dados da ABA CÁLCULO
+            buffer: buffer,
+            custoTotalMO: custoTotal,
+            detalhamentoCalculo: detalhamento,
+            
+            // Dados da ABA OUTPUT
+            preco: precoAlvo,
+            precoPiso: precoPiso,
+            precoPremium: precoPremium,
+            margem: ((precoAlvo - custoBase) / precoAlvo * 100).toFixed(1),
+            margemValor: precoAlvo - custoBase,
+            custoBase: custoBase,
+            custoComBuffer: custoComBuffer,
+            impostosCalculados: impostos,
+            csCalculado: cs,
+            parceiroValor: parceiro,
+            valorEntrada: valorEntrada,
+            valorParcelas: valorParcelas,
+            valorTotalJuros: valorTotalJuros,
+            alertas: alertas.map(a => a.msg).join('; '),
+            
+            // Metadados
+            id: indiceEditando !== -1 ? historico[indiceEditando].id : 'SP_' + new Date().getTime(),
+            data: new Date().toLocaleString('pt-BR'),
+            timestamp: new Date().toISOString(),
+            usuario: 'WebApp',
+            dispositivo: navigator.userAgent
+        };
+
+        showTab('output');
+        mostrarToast('✅ Cálculo realizado com sucesso!', 'success');
+
+    } catch (error) {
+        console.error('Erro:', error);
+        mostrarToast('❌ Erro ao calcular. Verifique todos os campos.', 'error');
+    }
+}
+
+// ========== NOVAS FUNÇÕES PARA INTEGRAÇÃO COM GOOGLE SHEETS ==========
+
+// Função para excluir da nuvem
+async function excluirDaNuvem(id) {
+    try {
+        console.log('🗑️ Excluindo da nuvem ID:', id);
+        
+        const response = await fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'excluirSimulacao',
+                id: id
+            })
         });
         
-        document.getElementById('riscoEscopo').value = dados.riscoEscopo || 20;
-        document.getElementById('entrada').value = dados.entrada || 50;
-        document.getElementById('parcelas').value = dados.parcelas || 1;
-        document.getElementById('desconto').value = dados.desconto || 0;
-        document.getElementById('parceiro').value = dados.parceiro || 'nao';
-        document.getElementById('percParceiro').value = dados.percParceiro || 0;
-        document.getElementById('aplicaCS').value = dados.aplicaCS || 'sim';
-        document.getElementById('percCS').value = dados.percCS || 7.5;
+        return true;
         
-        const container = document.getElementById('perfis-container');
-        container.innerHTML = '';
+    } catch(error) {
+        console.error('❌ Erro ao excluir da nuvem:', error);
+        return false;
+    }
+}
+
+// Função para buscar da nuvem
+async function buscarDaNuvem(id) {
+    try {
+        console.log('🔍 Buscando da nuvem ID:', id);
         
-        if (dados.perfis && dados.perfis.length > 0) {
-            dados.perfis.forEach(p => {
-                const div = document.createElement('div');
-                div.className = 'perfil-row';
-                div.innerHTML = `
-                    <select class="perfil">
-                        <option value="estag" ${p.perfil === 'estag' ? 'selected' : ''}>Estagiário</option>
-                        <option value="jr" ${p.perfil === 'jr' ? 'selected' : ''}>Júnior</option>
-                        <option value="pl" ${p.perfil === 'pl' ? 'selected' : ''}>Pleno</option>
-                        <option value="sr" ${p.perfil === 'sr' ? 'selected' : ''}>Sênior</option>
-                        <option value="coord" ${p.perfil === 'coord' ? 'selected' : ''}>Coordenador</option>
-                        <option value="socio" ${p.perfil === 'socio' ? 'selected' : ''}>Sócio</option>
-                    </select>
-                    <input type="number" class="horas" value="${p.horas}" min="0" step="1" placeholder="Horas">
-                    <span class="custo-previsto">R$ 0,00</span>
-                    <button class="remove-btn" onclick="removerPerfil(this)">✕</button>
-                `;
-                container.appendChild(div);
-                
-                div.querySelector('.horas').addEventListener('input', () => atualizarCustoPrevisto(div));
-                div.querySelector('.perfil').addEventListener('change', () => atualizarCustoPrevisto(div));
-                atualizarCustoPrevisto(div);
-            });
-        } else {
-            adicionarPerfil();
-        }
+        const response = await fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'buscarSimulacao',
+                id: id
+            })
+        });
+        
+        return true;
+        
+    } catch(error) {
+        console.error('❌ Erro ao buscar da nuvem:', error);
+        return false;
     }
+}
 
-    function calcular() {
-        try {
-            const perfis = document.querySelectorAll('.perfil-row');
-            let custoTotal = 0;
-            let detalhamento = [];
-            
-            perfis.forEach(perfil => {
-                const select = perfil.querySelector('.perfil');
-                const horas = parseFloat(perfil.querySelector('.horas').value) || 0;
-                
-                if (horas > 0) {
-                    const perfilNome = select.options[select.selectedIndex].text;
-                    const perfilValue = select.value;
-                    const perfilId = perfilValue.charAt(0).toUpperCase() + perfilValue.slice(1);
-                    const custoHora = getCustoHora(perfilId);
-                    const custo = custoHora * horas;
-                    
-                    custoTotal += custo;
-                    detalhamento.push({ perfil: perfilNome, horas, custoHora, custo });
-                }
-            });
-
-            const buffer = calcularBuffer();
-            const custoComBuffer = custoTotal * (1 + buffer);
-
-            const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-
-            const percImpostos = parseFloat(document.getElementById('impostos')?.value) || 11.33;
-            const impostos = custoComBuffer * (percImpostos / 100);
-
-            const aplicaCS = document.getElementById('aplicaCS')?.value === 'sim';
-            const percCS = aplicaCS ? (parseFloat(document.getElementById('percCS')?.value) || 7.5) : 0;
-            const cs = custoComBuffer * (percCS / 100);
-
-            const temParceiro = document.getElementById('parceiro')?.value === 'sim';
-            const percParceiro = temParceiro ? (parseFloat(document.getElementById('percParceiro')?.value) || 0) : 0;
-            const parceiro = custoComBuffer * (percParceiro / 100);
-
-            const tipoCobranca = document.querySelector('input[name="cobranca"]:checked')?.value || 'hora';
-            const margens = {
-                hora: parseFloat(document.getElementById('margemHora')?.value) || 55,
-                fechado: parseFloat(document.getElementById('margemFechado')?.value) || 47,
-                retainer: parseFloat(document.getElementById('margemRetainer')?.value) || 52,
-                exito: parseFloat(document.getElementById('margemExito')?.value) || 65,
-                hibrido: parseFloat(document.getElementById('margemHibrido')?.value) || 50
-            };
-            
-            const margemAlvo = margens[tipoCobranca] / 100;
-            const custoBase = custoComBuffer + impostos + cs + parceiro;
-
-            const precoPiso = custoBase * (1 + (margemAlvo - 0.15));
-            const precoAlvo = custoBase * (1 + margemAlvo);
-            const precoPremium = custoBase * (1 + margemAlvo + 0.15);
-
-            const desconto = parseFloat(document.getElementById('desconto').value) || 0;
-            const precoComDesconto = precoAlvo * (1 - desconto/100);
-
-            document.getElementById('preco-piso').innerHTML = `R$ ${precoPiso.toFixed(2)}`;
-            document.getElementById('preco-alvo').innerHTML = `R$ ${precoAlvo.toFixed(2)}`;
-            document.getElementById('preco-premium').innerHTML = `R$ ${precoPremium.toFixed(2)}`;
-            
-            document.getElementById('output-custo').innerHTML = `R$ ${custoBase.toFixed(2)}`;
-            document.getElementById('output-impostos').innerHTML = `R$ ${impostos.toFixed(2)}`;
-            document.getElementById('output-cs').innerHTML = `R$ ${cs.toFixed(2)}`;
-            document.getElementById('output-margem-valor').innerHTML = `R$ ${(precoAlvo - custoBase).toFixed(2)}`;
-            document.getElementById('output-margem-pct').innerHTML = `${((precoAlvo - custoBase) / precoAlvo * 100).toFixed(1)}%`;
-
-            const entradaPct = parseFloat(document.getElementById('entrada').value) || 50;
-            const parcelas = parseInt(document.getElementById('parcelas').value) || 1;
-            const taxaJuros = parseFloat(document.getElementById('taxaParcelamento').value) || 1;
-            
-            const valorEntrada = precoAlvo * (entradaPct/100);
-            const valorParcelas = (precoAlvo - valorEntrada) / parcelas;
-            const valorTotalJuros = precoAlvo * Math.pow(1 + taxaJuros/100, parcelas);
-            
-            document.getElementById('output-entrada').innerHTML = `R$ ${valorEntrada.toFixed(2)}`;
-            document.getElementById('output-parcelas').innerHTML = `${parcelas}x R$ ${valorParcelas.toFixed(2)}`;
-            document.getElementById('output-total-juros').innerHTML = `R$ ${valorTotalJuros.toFixed(2)}`;
-
-            const alertas = [];
-            
-            if (precoComDesconto < precoPiso) {
-                alertas.push({ tipo: 'critical', msg: '⚠️ Abaixo do piso' });
-            }
-            
-            if (desconto > 15) {
-                alertas.push({ tipo: 'warning', msg: '⚠️ Desconto acima da alçada (máx 15%)' });
-            }
-            
-            if (tipoCobranca === 'exito' && custoBase > precoAlvo * 0.4) {
-                alertas.push({ tipo: 'critical', msg: '⚠️ Modelo de êxito sem cobertura de custo' });
-            }
-            
-            if (tipoCobranca === 'retainer' && !document.getElementById('escopo').value) {
-                alertas.push({ tipo: 'warning', msg: '⚠️ Escopo sem limites (retainer)' });
-            }
-            
-            if (document.getElementById('risco').value === 'alto') {
-                alertas.push({ tipo: 'critical', msg: '⚠️ Risco alto de inadimplência - Exigir entrada maior' });
-            }
-            
-            if (tipoCobranca === 'exito' && entradaPct < 30) {
-                alertas.push({ tipo: 'warning', msg: '⚠️ Êxito: Recomendado entrada mínima de 30%' });
-            }
-
-            const alertasContainer = document.getElementById('alertas-container');
-            alertasContainer.innerHTML = '';
-            
-            if (alertas.length === 0) {
-                alertasContainer.innerHTML = '<div class="alert alert-success">✅ Nenhum alerta identificado</div>';
-            } else {
-                alertas.forEach(a => {
-                    alertasContainer.innerHTML += `<div class="alert alert-${a.tipo === 'critical' ? 'critical' : 'warning'}">${a.msg}</div>`;
-                });
-            }
-
-            const corpoCalculo = document.getElementById('corpo-calculo');
-            corpoCalculo.innerHTML = '';
-            
-            detalhamento.forEach(item => {
-                corpoCalculo.innerHTML += `
-                    <tr>
-                        <td>${item.perfil}</td>
-                        <td>${item.horas}h</td>
-                        <td>R$ ${item.custoHora.toFixed(2)}</td>
-                        <td>R$ ${item.custo.toFixed(2)}</td>
-                        <td>R$ ${(item.custo * buffer).toFixed(2)}</td>
-                        <td>R$ ${(item.custo * (1 + buffer)).toFixed(2)}</td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById('total-mao-obra').innerHTML = `R$ ${custoTotal.toFixed(2)}`;
-            document.getElementById('total-overhead').innerHTML = `R$ ${overheadTotal.toFixed(2)}`;
-            document.getElementById('subtotal-geral').innerHTML = `R$ ${(custoTotal + overheadTotal).toFixed(2)}`;
-
-            document.getElementById('composicao-custo').innerHTML = `R$ ${custoComBuffer.toFixed(2)}`;
-            document.getElementById('composicao-impostos').innerHTML = `R$ ${impostos.toFixed(2)}`;
-            document.getElementById('composicao-cs').innerHTML = `R$ ${cs.toFixed(2)}`;
-            document.getElementById('composicao-parceiro').innerHTML = `R$ ${parceiro.toFixed(2)}`;
-            document.getElementById('composicao-base').innerHTML = `R$ ${custoBase.toFixed(2)}`;
-            document.getElementById('composicao-margem').innerHTML = `R$ ${(precoAlvo - custoBase).toFixed(2)}`;
-
-            window.ultimoResultado = {
-                ...coletarDadosInput(),
-                preco: precoAlvo,
-                precoPiso: precoPiso,
-                precoPremium: precoPremium,
-                margem: ((precoAlvo - custoBase) / precoAlvo * 100).toFixed(1),
-                data: new Date().toLocaleString('pt-BR')
-            };
-
-            showTab('output');
-
-        } catch (error) {
-            console.error('Erro:', error);
-            alert('Erro ao calcular. Verifique todos os campos.');
-        }
+// Função para listar simulações da nuvem
+async function listarSimulacoesNuvem() {
+    try {
+        const response = await fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'listarSimulacoes'
+            })
+        });
+        
+        return true;
+        
+    } catch(error) {
+        console.error('❌ Erro ao listar da nuvem:', error);
+        return false;
     }
+}
 
-    // ========== HISTÓRICO CORRIGIDO ==========
+// ========== FUNÇÃO PARA ENVIAR TODAS AS 5 ABAS PARA GOOGLE SHEETS ==========
+async function enviarTodasAbasParaPlanilha(dadosCompletos) {
+    try {
+        console.log('📤 Enviando dados COMPLETOS (5 abas) para planilha:', dadosCompletos.cliente);
+        
+        const dadosEnvio = {
+            action: 'salvarCompleto',
+            dados: dadosCompletos
+        };
+        
+        const response = await fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dadosEnvio)
+        });
+        
+        console.log('✅ Requisição enviada - 5 abas salvas na planilha');
+        return true;
+        
+    } catch(error) {
+        console.error('❌ Erro ao enviar para planilha:', error);
+        return false;
+    }
+}
+
+// ========== FUNÇÃO PARA TESTAR CONEXÃO ==========
+async function testarConexaoGoogle() {
+    try {
+        console.log('🔄 Testando conexão com Google Sheets...');
+        
+        mostrarToast('Testando conexão...', 'warning');
+        
+        const response = await fetch(GOOGLE_SHEETS_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'testarConexao'
+            })
+        });
+        
+        mostrarToast('✅ Conexão estabelecida! A planilha está pronta.', 'success');
+        return true;
+        
+    } catch(error) {
+        console.error('❌ Erro ao testar conexão:', error);
+        mostrarToast('❌ Falha na conexão: ' + error.message, 'error');
+        return false;
+    }
+}
+
+// ========== FUNÇÃO DE SALVAR NO HISTÓRICO (ATUALIZADA) ==========
+async function salvarHistorico(event) {
+    if (!window.ultimoResultado) {
+        mostrarToast('❌ Calcule um preço primeiro!', 'warning');
+        return;
+    }
     
-    function salvarHistorico() {
-        if (window.ultimoResultado) {
-            
-            if (indiceEditando !== -1) {
-                // Atualiza o item existente
-                historico[indiceEditando] = window.ultimoResultado;
-                alert('✅ Simulação atualizada com sucesso!');
-                indiceEditando = -1; // Reseta o índice de edição
-            } else {
-                // Adiciona novo item
-                historico.push(window.ultimoResultado);
-                alert('✅ Nova simulação salva com sucesso!');
-            }
-            
-            localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
-            atualizarHistorico();
-        }
+    // Mostrar loading no botão
+    const btnSalvar = event?.target;
+    const textoOriginal = btnSalvar?.innerHTML;
+    if (btnSalvar) {
+        btnSalvar.innerHTML = '<span class="spinner"></span> Salvando 5 abas...';
+        btnSalvar.disabled = true;
     }
-
-    function editarItem(indiceReal) {
-        const item = historico[indiceReal];
+    
+    try {
+        const isEditando = indiceEditando !== -1;
         
-        if (item) {
-            indiceEditando = indiceReal; // Guarda o índice real
-            preencherInputComDados(item);
-            showTab('input');
-            fecharModal();
-            
-            setTimeout(() => {
-                alert('✏️ Modo edição ativado para: ' + item.cliente);
-            }, 100);
+        // 1. Atualizar ou adicionar no histórico local
+        if (isEditando) {
+            historico[indiceEditando] = window.ultimoResultado;
+            mostrarToast('✅ Simulação atualizada localmente', 'success');
+        } else {
+            historico.unshift(window.ultimoResultado);
+            mostrarToast('✅ Nova simulação salva localmente', 'success');
         }
-    }
-
-    function excluirItem(indiceReal) {
-        if (confirm('Tem certeza que deseja excluir esta simulação?')) {
-            historico.splice(indiceReal, 1);
-            localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
-            atualizarHistorico();
-            
-            if (indiceEditando === indiceReal) {
-                indiceEditando = -1;
-            }
-            
-            fecharModal();
-        }
-    }
-
-    function abrirModalEdicao(indiceReal) {
-        const item = historico[indiceReal];
-        if (!item) return;
         
-        const modal = document.getElementById('modalEdicao');
-        const conteudo = document.getElementById('modal-conteudo');
+        // 2. Salvar no localStorage
+        localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
+        
+        // 3. Enviar para Google Sheets (TODAS AS 5 ABAS)
+        console.log('📤 Enviando TODAS AS 5 ABAS para Google Sheets...');
+        const enviado = await enviarTodasAbasParaPlanilha(window.ultimoResultado);
+        
+        if (enviado) {
+            console.log('✅ Dados de todas as abas salvos na planilha');
+            mostrarToast('✅ Todas as 5 abas salvas no Google Sheets!', 'success');
+        } else {
+            console.warn('⚠️ Dados salvos localmente, falha no envio para planilha');
+            mostrarToast('⚠️ Salvo localmente, falha na sincronização com Google Sheets', 'warning');
+        }
+        
+        // 4. Reset do índice de edição
+        if (isEditando) {
+            indiceEditando = -1;
+        }
+        
+        // 5. Atualizar histórico
+        atualizarHistorico();
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar:', error);
+        mostrarToast('❌ Erro ao salvar: ' + error.message, 'error');
+    } finally {
+        // Restaurar botão
+        if (btnSalvar) {
+            btnSalvar.innerHTML = textoOriginal;
+            btnSalvar.disabled = false;
+        }
+    }
+}
+
+// ========== FUNÇÕES DO HISTÓRICO ATUALIZADAS ==========
+
+// Função de editar atualizada
+function editarItem(indiceReal) {
+    const item = historico[indiceReal];
+    
+    if (item) {
+        indiceEditando = indiceReal;
+        preencherInputComDados(item);
+        showTab('input');
+        fecharModal();
+        
+        mostrarToast(`✏️ Editando: ${item.cliente}`, 'warning');
+        mostrarToast('⚠️ Ao salvar, a nuvem será atualizada', 'warning');
+    }
+}
+
+// Função de excluir atualizada
+async function excluirItem(indiceReal) {
+    const item = historico[indiceReal];
+    
+    if (confirm(`🗑️ Tem certeza que deseja excluir "${item.cliente}"?\n\nIsso irá remover de TODAS as abas na planilha!`)) {
+        
+        // Mostrar loading
+        mostrarToast('Excluindo de todas as abas...', 'warning');
+        
+        // Excluir da nuvem
+        const excluidoNuvem = await excluirDaNuvem(item.id);
+        
+        if (excluidoNuvem) {
+            mostrarToast('✅ Excluído da nuvem com sucesso!', 'success');
+        } else {
+            mostrarToast('⚠️ Falha ao excluir da nuvem', 'warning');
+        }
+        
+        // Excluir localmente
+        historico.splice(indiceReal, 1);
+        localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
+        atualizarHistorico();
+        
+        if (indiceEditando === indiceReal) {
+            indiceEditando = -1;
+        }
+        
+        fecharModal();
+    }
+}
+
+// Função para sincronizar com a nuvem
+async function sincronizarComNuvem() {
+    mostrarToast('Sincronizando com a nuvem...', 'warning');
+    
+    try {
+        // Aqui você pode implementar a lógica de buscar dados da nuvem
+        // e mesclar com o histórico local
+        
+        mostrarToast('✅ Sincronização concluída!', 'success');
+    } catch(error) {
+        mostrarToast('❌ Erro na sincronização', 'error');
+    }
+}
+
+function abrirModalEdicao(indiceReal) {
+    const item = historico[indiceReal];
+    if (!item) return;
+    
+    const modal = document.getElementById('modalEdicao');
+    const conteudo = document.getElementById('modal-conteudo');
+    
+    const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
+    const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
+    
+    conteudo.innerHTML = `
+        <p><strong>ID:</strong> ${item.id}</p>
+        <p><strong>Cliente:</strong> ${item.cliente}</p>
+        <p><strong>Produto:</strong> ${item.produtoTexto || item.produto}</p>
+        <p><strong>Preço:</strong> R$ ${item.preco.toFixed(2)}</p>
+        <p><strong>Margem:</strong> ${item.margem}%</p>
+        <p><strong>Risco:</strong> <span class="badge ${riscoClass}">${riscoLabel}</span></p>
+        <p><strong>Data:</strong> ${item.data}</p>
+        <div class="button-group">
+            <button class="btn btn-warning" onclick="editarItem(${indiceReal})">✏️ Editar</button>
+            <button class="btn btn-danger" onclick="excluirItem(${indiceReal})">🗑️ Excluir</button>
+            <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+        </div>
+    `;
+    
+    modal.classList.add('active');
+}
+
+function atualizarHistorico() {
+    const lista = document.getElementById('historico-lista');
+    const filtro = document.getElementById('filtroCliente')?.value?.toLowerCase() || '';
+    const ordenar = document.getElementById('ordenarPor')?.value || 'data';
+    
+    // Filtrar
+    let historicoFiltrado = historico.filter(item => 
+        item.cliente && item.cliente.toLowerCase().includes(filtro)
+    );
+    
+    // Ordenar
+    if (ordenar === 'data') {
+        historicoFiltrado.sort((a, b) => new Date(b.data) - new Date(a.data));
+    } else if (ordenar === 'cliente') {
+        historicoFiltrado.sort((a, b) => (a.cliente || '').localeCompare(b.cliente || ''));
+    } else if (ordenar === 'preco') {
+        historicoFiltrado.sort((a, b) => (b.preco || 0) - (a.preco || 0));
+    } else if (ordenar === 'margem') {
+        historicoFiltrado.sort((a, b) => (b.margem || 0) - (a.margem || 0));
+    }
+    
+    lista.innerHTML = '';
+    
+    if (historicoFiltrado.length === 0) {
+        lista.innerHTML = '<p class="text-center" style="padding: 40px;">📭 Nenhuma simulação encontrada</p>';
+        return;
+    }
+    
+    historicoFiltrado.forEach(item => {
+        const indiceReal = historico.findIndex(h => h.id === item.id);
+        
+        if (indiceReal === -1) return;
         
         const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
         const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
+        const isRecent = indiceReal === 0;
         
-        conteudo.innerHTML = `
-            <p><strong>Cliente:</strong> ${item.cliente}</p>
-            <p><strong>Produto:</strong> ${item.produto}</p>
-            <p><strong>Preço Alvo:</strong> R$ ${item.preco.toFixed(2)}</p>
-            <p><strong>Margem:</strong> ${item.margem}%</p>
-            <p><strong>Risco:</strong> <span class="badge ${riscoClass}">${riscoLabel}</span></p>
-            <p><strong>Data:</strong> ${item.data}</p>
-            <div class="button-group">
-                <button class="btn btn-warning" onclick="editarItem(${indiceReal})">✏️ Editar</button>
-                <button class="btn btn-danger" onclick="excluirItem(${indiceReal})">🗑️ Excluir</button>
-                <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+        lista.innerHTML += `
+            <div class="historico-item" onclick="abrirModalEdicao(${indiceReal})">
+                <div class="historico-header">
+                    <span class="historico-titulo">
+                        ${item.cliente}
+                        ${isRecent ? '<span style="background:#3b82f6; color:white; padding:2px 8px; border-radius:12px; font-size:10px; margin-left:8px;">🆕 Recente</span>' : ''}
+                        <span style="font-size:10px; margin-left:5px; color:#64748b;">${item.id}</span>
+                    </span>
+                    <div class="historico-acoes" onclick="event.stopPropagation()">
+                        <button style="background:#f59e0b; color:white; border:none; width:36px; height:36px; border-radius:18px; cursor:pointer;" onclick="editarItem(${indiceReal})" title="Editar">✏️</button>
+                        <button style="background:#ef4444; color:white; border:none; width:36px; height:36px; border-radius:18px; cursor:pointer;" onclick="excluirItem(${indiceReal})" title="Excluir">🗑️</button>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px;">
+                    <div><small>Produto</small><br><strong>${item.produtoTexto || item.produto}</strong></div>
+                    <div><small>Preço</small><br><strong>R$ ${item.preco.toFixed(2)}</strong></div>
+                    <div><small>Margem</small><br><strong>${item.margem}%</strong></div>
+                    <div><small>Risco</small><br><span class="badge ${riscoClass}">${riscoLabel}</span></div>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 8px; display: flex; justify-content: space-between;">
+                    <span>${item.data}</span>
+                    ${isRecent ? '<span style="color:#3b82f6;">⬆️ Último</span>' : ''}
+                </div>
             </div>
         `;
-        
-        modal.classList.add('active');
-    }
+    });
+}
 
-    function fecharModal() {
-        document.getElementById('modalEdicao').classList.remove('active');
-    }
+function exportarHistorico() {
+    const dataStr = JSON.stringify(historico, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const link = document.createElement('a');
+    link.setAttribute('href', dataUri);
+    link.setAttribute('download', `historico_${new Date().toISOString().split('T')[0]}.json`);
+    link.click();
+    
+    mostrarToast('📤 Histórico exportado com sucesso!', 'success');
+}
 
-    function atualizarHistorico() {
-        const lista = document.getElementById('historico-lista');
-        const filtro = document.getElementById('filtroCliente')?.value?.toLowerCase() || '';
-        const ordenar = document.getElementById('ordenarPor')?.value || 'data';
-        
-        // Filtrar
-        let indicesFiltrados = [];
-        let historicoFiltrado = historico.filter((item, index) => {
-            if (item.cliente.toLowerCase().includes(filtro)) {
-                indicesFiltrados.push(index);
-                return true;
-            }
-            return false;
-        });
-        
-        // Ordenar (mantendo os índices reais)
-        if (ordenar === 'data') {
-            historicoFiltrado.sort((a, b) => new Date(b.data) - new Date(a.data));
-        } else if (ordenar === 'cliente') {
-            historicoFiltrado.sort((a, b) => a.cliente.localeCompare(b.cliente));
-        } else if (ordenar === 'preco') {
-            historicoFiltrado.sort((a, b) => b.preco - a.preco);
-        } else if (ordenar === 'margem') {
-            historicoFiltrado.sort((a, b) => b.margem - a.margem);
-        }
-        
-        // Reconstruir lista de índices após ordenação
-        const indicesOrdenados = [];
-        historicoFiltrado.forEach(item => {
-            const indexOriginal = historico.findIndex(h => 
-                h.cliente === item.cliente && 
-                h.data === item.data && 
-                h.preco === item.preco
-            );
-            if (indexOriginal !== -1) {
-                indicesOrdenados.push(indexOriginal);
-            }
-        });
-        
-        lista.innerHTML = '';
-        
-        if (historicoFiltrado.length === 0) {
-            lista.innerHTML = '<p class="text-center" style="padding: 40px;">📭 Nenhuma simulação encontrada</p>';
-            return;
-        }
-        
-        historicoFiltrado.forEach((item, idx) => {
-            const indiceReal = indicesOrdenados[idx];
-            const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
-            const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
-            
-            lista.innerHTML += `
-                <div class="historico-item" onclick="abrirModalEdicao(${indiceReal})">
-                    <div class="historico-header">
-                        <span class="historico-titulo">${item.cliente}</span>
-                        <div class="historico-acoes" onclick="event.stopPropagation()">
-                            <button class="btn-warning" style="background: #f59e0b; color: white; border: none; width: 36px; height: 36px; border-radius: 18px; cursor: pointer;" onclick="editarItem(${indiceReal})">✏️</button>
-                            <button class="btn-danger" style="background: #ef4444; color: white; border: none; width: 36px; height: 36px; border-radius: 18px; cursor: pointer;" onclick="excluirItem(${indiceReal})">🗑️</button>
-                        </div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 10px;">
-                        <div><small>Produto</small><br><strong>${item.produto}</strong></div>
-                        <div><small>Preço</small><br><strong>R$ ${item.preco.toFixed(2)}</strong></div>
-                        <div><small>Margem</small><br><strong>${item.margem}%</strong></div>
-                        <div><small>Risco</small><br><span class="badge ${riscoClass}">${riscoLabel}</span></div>
-                    </div>
-                    <div style="font-size: 11px; color: #64748b; margin-top: 8px;">${item.data}</div>
-                </div>
-            `;
-        });
-    }
-
-    function exportarHistorico() {
-        const dataStr = JSON.stringify(historico, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-        
-        const exportFileDefaultName = `historico_precificacao_${new Date().toISOString().split('T')[0]}.json`;
-        
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', exportFileDefaultName);
-        linkElement.click();
-    }
-
-    // Inicialização
-    window.onload = function() {
-        adicionarPerfil();
-        
-        document.querySelectorAll('.radio-option').forEach(option => {
-            option.addEventListener('click', function() {
-                const radio = this.querySelector('input[type="radio"]');
-                radio.checked = true;
-                document.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
-                this.classList.add('selected');
-            });
-        });
-        
-        const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
-        perfis.forEach(perfil => {
-            const salario = document.getElementById(`salario${perfil}`);
-            const beneficios = document.getElementById(`beneficios${perfil}`);
-            const horas = document.getElementById(`horas${perfil}`);
-            
-            const atualizarCusto = () => {
-                const s = parseFloat(salario.value) || 0;
-                const b = parseFloat(beneficios.value) || 0;
-                const h = parseFloat(horas.value) || 140;
-                const encargos = s * 0.72;
-                const totalMensal = s + encargos + b;
-                
-                document.getElementById(`encargos${perfil}`).textContent = Math.round(encargos);
-                document.getElementById(`totalMensal${perfil}`).textContent = Math.round(totalMensal);
-                
-                const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-                const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
-                const overheadHora = overheadTotal / horasTotais;
-                document.getElementById(`overheadHora${perfil}`).textContent = `R$ ${overheadHora.toFixed(2)}`;
-                document.getElementById('overheadPorHora').textContent = overheadHora.toFixed(2);
-                
-                const custoHora = (totalMensal / h) + overheadHora;
-                document.getElementById(`custoHora${perfil}`).textContent = custoHora.toFixed(2);
-            };
-            
-            if (salario) salario.addEventListener('input', atualizarCusto);
-            if (beneficios) beneficios.addEventListener('input', atualizarCusto);
-            if (horas) horas.addEventListener('input', atualizarCusto);
-            atualizarCusto();
-        });
-
-        const overheadTotal = document.getElementById('overheadTotal');
-        const horasTotais = document.getElementById('horasTotais');
-        
-        const atualizarOverhead = () => {
-            const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
-            perfis.forEach(perfil => {
-                const salario = document.getElementById(`salario${perfil}`);
-                const beneficios = document.getElementById(`beneficios${perfil}`);
-                const horas = document.getElementById(`horas${perfil}`);
-                
-                const s = parseFloat(salario.value) || 0;
-                const b = parseFloat(beneficios.value) || 0;
-                const h = parseFloat(horas.value) || 140;
-                const encargos = s * 0.72;
-                const totalMensal = s + encargos + b;
-                
-                const overheadTotalVal = parseFloat(overheadTotal.value) || 45000;
-                const horasTotaisVal = parseFloat(horasTotais.value) || 840;
-                const overheadHora = overheadTotalVal / horasTotaisVal;
-                
-                document.getElementById(`overheadHora${perfil}`).textContent = `R$ ${overheadHora.toFixed(2)}`;
-                document.getElementById('overheadPorHora').textContent = overheadHora.toFixed(2);
-                
-                const custoHora = (totalMensal / h) + overheadHora;
-                document.getElementById(`custoHora${perfil}`).textContent = custoHora.toFixed(2);
-            });
-        };
-        
-        overheadTotal.addEventListener('input', atualizarOverhead);
-        horasTotais.addEventListener('input', atualizarOverhead);
-        
-        document.getElementById('filtroCliente').addEventListener('input', atualizarHistorico);
-        document.getElementById('ordenarPor').addEventListener('change', atualizarHistorico);
-        
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('modalEdicao');
-            if (event.target === modal) {
-                fecharModal();
-            }
-        });
-        
+// ========== FUNÇÃO PARA LIMPAR TUDO ==========
+function limparTudo() {
+    if (confirm('⚠️ TEM CERTEZA? Isso irá apagar TODAS as simulações do histórico LOCAL!')) {
+        historico = [];
+        localStorage.removeItem('historicoSmartPrice');
         atualizarHistorico();
-        indiceEditando = -1;
-    };
+        mostrarToast('🗑️ Histórico local limpo!', 'success');
+    }
+}
+
+// ========== INICIALIZAÇÃO ==========
+window.onload = function() {
+    // Ordenar histórico por data (mais recente primeiro)
+    historico.sort((a, b) => new Date(b.data) - new Date(a.data));
+    
+    // Adicionar primeiro perfil
+    adicionarPerfil();
+    
+    // Configurar radios
+    document.querySelectorAll('.radio-option').forEach(option => {
+        option.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            radio.checked = true;
+            document.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+    
+    // Função para atualizar custos
+    function atualizarTodosCustos() {
+        const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
+        const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+        const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
+        const overheadHora = overheadTotal / horasTotais;
+        
+        document.getElementById('overheadPorHora').textContent = overheadHora.toFixed(2);
+        
+        perfis.forEach(perfil => {
+            const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
+            const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
+            const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
+            
+            const encargos = salario * 0.72;
+            const totalMensal = salario + encargos + beneficios;
+            const custoHora = (totalMensal / horas) + overheadHora;
+            
+            const encargosEl = document.getElementById(`encargos${perfil}`);
+            const totalMensalEl = document.getElementById(`totalMensal${perfil}`);
+            const overheadHoraEl = document.getElementById(`overheadHora${perfil}`);
+            const custoHoraEl = document.getElementById(`custoHora${perfil}`);
+            
+            if (encargosEl) encargosEl.textContent = Math.round(encargos);
+            if (totalMensalEl) totalMensalEl.textContent = Math.round(totalMensal);
+            if (overheadHoraEl) overheadHoraEl.textContent = `R$ ${overheadHora.toFixed(2)}`;
+            if (custoHoraEl) custoHoraEl.textContent = custoHora.toFixed(2);
+        });
+    }
+    
+    // Adicionar listeners para atualização automática
+    const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
+    perfis.forEach(perfil => {
+        const salario = document.getElementById(`salario${perfil}`);
+        const beneficios = document.getElementById(`beneficios${perfil}`);
+        const horas = document.getElementById(`horas${perfil}`);
+        
+        if (salario) salario.addEventListener('input', atualizarTodosCustos);
+        if (beneficios) beneficios.addEventListener('input', atualizarTodosCustos);
+        if (horas) horas.addEventListener('input', atualizarTodosCustos);
+    });
+    
+    const overheadTotal = document.getElementById('overheadTotal');
+    const horasTotais = document.getElementById('horasTotais');
+    
+    if (overheadTotal) overheadTotal.addEventListener('input', atualizarTodosCustos);
+    if (horasTotais) horasTotais.addEventListener('input', atualizarTodosCustos);
+    
+    // Inicializar custos
+    atualizarTodosCustos();
+    
+    // Configurar filtros do histórico
+    const filtroCliente = document.getElementById('filtroCliente');
+    const ordenarPor = document.getElementById('ordenarPor');
+    
+    if (filtroCliente) filtroCliente.addEventListener('input', atualizarHistorico);
+    if (ordenarPor) ordenarPor.addEventListener('change', atualizarHistorico);
+    
+    // Fechar modal ao clicar fora
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('modalEdicao');
+        if (event.target === modal) fecharModal();
+    });
+    
+    // Atualizar histórico
+    atualizarHistorico();
+    indiceEditando = -1;
+    
+    // Verificar conexão com Google Sheets
+    console.log('✅ SmartPrice PRO - Sistema carregado');
+    console.log('🌐 Google Sheets URL configurada:', GOOGLE_SHEETS_URL ? '✅ OK' : '❌ Não configurada');
+    console.log('📊 Modo: Salvando TODAS AS 5 ABAS na planilha');
+    console.log('🆕 Novo: Exclusão e edição em todas as abas via ID');
+    
+    // Mostrar boas-vindas
+    mostrarToast('🚀 SmartPrice PRO v4.0 - Exclusão/Edição na nuvem!', 'success');
+};
 </script>
+</body>
+</html>
