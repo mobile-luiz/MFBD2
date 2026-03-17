@@ -343,7 +343,7 @@ let indiceEditando = -1;
 
 // ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
 // SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwQcekRNWdeWx34ATvu4Q161pzaU2GqNRGPs_-d0IUCIwMq9ZH4jhPyczfGuOjgJefq/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwaktaVKSQUnVvVRDgr5tI7MKZVPOU1EAbetf5NyRKGPIzI3IpZfAoPTNjUaRYnPUJE/exec';
 
 // ========== FUNÇÕES DE NOTIFICAÇÃO ==========
 function mostrarToast(mensagem, tipo = 'success') {
