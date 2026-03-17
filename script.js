@@ -9,7 +9,6 @@ let tentativasLogin = 0;
 // ========== FUNÇÕES DE FORMATAÇÃO BRASILEIRA ==========
 function formatarMoeda(valor) {
     if (valor === undefined || valor === null || isNaN(valor)) return 'R$ 0,00';
-    // Garantir que valor é número
     const num = parseFloat(valor);
     if (isNaN(num)) return 'R$ 0,00';
     return num.toLocaleString('pt-BR', {
@@ -34,12 +33,55 @@ function formatarPercentual(valor) {
     if (valor === undefined || valor === null || isNaN(valor)) return '0%';
     const num = parseFloat(valor);
     if (isNaN(num)) return '0%';
-    // Converter de decimal para percentual (0.35 -> 35,0%)
     const percentual = num * 100;
     return percentual.toLocaleString('pt-BR', {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1
     }) + '%';
+}
+
+// ===== FUNÇÃO PARA COLETAR TODOS OS SALÁRIOS ATUALIZADOS =====
+function coletarSalariosAtualizados() {
+    const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
+    const salarios = {};
+    
+    perfis.forEach(perfil => {
+        const salarioInput = document.getElementById(`salario${perfil}`);
+        const beneficiosInput = document.getElementById(`beneficios${perfil}`);
+        const horasInput = document.getElementById(`horas${perfil}`);
+        
+        if (salarioInput) {
+            salarios[`salario${perfil}`] = parseFloat(salarioInput.value) || 0;
+        }
+        if (beneficiosInput) {
+            salarios[`beneficios${perfil}`] = parseFloat(beneficiosInput.value) || 0;
+        }
+        if (horasInput) {
+            salarios[`horas${perfil}`] = parseFloat(horasInput.value) || 140;
+        }
+    });
+    
+    salarios.overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+    salarios.horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
+    
+    console.log('💰 Salários coletados:', salarios);
+    return salarios;
+}
+
+// ===== FUNÇÃO PARA CALCULAR CUSTO/HORA COM SALÁRIOS ATUALIZADOS =====
+function getCustoHoraComSalarios(perfil, salarios) {
+    const salario = salarios[`salario${perfil}`] || 0;
+    const beneficios = salarios[`beneficios${perfil}`] || 0;
+    const horas = salarios[`horas${perfil}`] || 140;
+    
+    const encargos = salario * 0.72;
+    const custoTotalMensal = salario + encargos + beneficios;
+    
+    const overheadTotal = salarios.overheadTotal || 45000;
+    const horasTotais = salarios.horasTotais || 840;
+    const overheadHora = overheadTotal / horasTotais;
+    
+    return (custoTotalMensal / horas) + overheadHora;
 }
 
 // Verificar se usuário já está logado
@@ -80,7 +122,6 @@ function mostrarSistema() {
     if (telaLogin) telaLogin.style.display = 'none';
     if (sistemaPrincipal) sistemaPrincipal.style.display = 'block';
     
-    // Inicializar componentes do sistema
     setTimeout(() => {
         if (typeof adicionarPerfil === 'function') adicionarPerfil();
         if (typeof atualizarTodosCustos === 'function') atualizarTodosCustos();
@@ -95,24 +136,21 @@ function atualizarHeaderUsuario() {
     const header = document.querySelector('.header');
     if (!header) return;
     
-    // Remover info antiga se existir
     const oldUserInfo = document.getElementById('user-info-header');
     if (oldUserInfo) oldUserInfo.innerHTML = '';
     
-    // Criar nova info
     const userInfo = document.getElementById('user-info-header');
     if (!userInfo) return;
     
-    // Determinar cor do perfil
-    let perfilColor = '#3b82f6'; // Azul padrão
+    let perfilColor = '#3b82f6';
     let perfilIcon = '👤';
     
     if (usuarioAtual.perfil === 'Admin') {
-        perfilColor = '#10b981'; // Verde
+        perfilColor = '#10b981';
         perfilIcon = '👑';
     }
     if (usuarioAtual.perfil === 'Master') {
-        perfilColor = '#8b5cf6'; // Roxo
+        perfilColor = '#8b5cf6';
         perfilIcon = '⚡';
     }
     
@@ -144,7 +182,6 @@ async function fazerLogin(event) {
     const erroElement = document.getElementById('login-erro');
     const loadingElement = document.getElementById('login-loading');
     
-    // Validações básicas
     if (!email || !senha) {
         mostrarErro('⚠️ Preencha email e senha');
         return;
@@ -160,7 +197,6 @@ async function fazerLogin(event) {
         return;
     }
     
-    // Limitar tentativas
     tentativasLogin++;
     if (tentativasLogin > 3) {
         mostrarErro('⏰ Muitas tentativas. Aguarde 30 segundos...');
@@ -173,7 +209,6 @@ async function fazerLogin(event) {
         return;
     }
     
-    // Mostrar loading
     btnLogin.innerHTML = '<span class="spinner" style="width: 20px; height: 20px; border-color: rgba(255,255,255,0.3); border-top-color: white;"></span> Verificando...';
     btnLogin.disabled = true;
     if (erroElement) erroElement.style.display = 'none';
@@ -182,7 +217,6 @@ async function fazerLogin(event) {
     try {
         console.log('🔐 Tentando login:', email);
         
-        // Tentar login primeiro com usuário de teste
         if (email === 'admin@mfbd.com' && senha === '123456') {
             console.log('✅ Login de teste bem-sucedido');
             
@@ -204,7 +238,6 @@ async function fazerLogin(event) {
             return;
         }
         
-        // Tentar login com Google Sheets
         const response = await fetch(GOOGLE_SHEETS_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -219,22 +252,17 @@ async function fazerLogin(event) {
         console.log('📥 Resposta do servidor:', data);
         
         if (data && data.status === 'sucesso') {
-            // Login bem-sucedido
             usuarioAtual = data.usuario || {
                 email: email,
                 nome: email.split('@')[0],
                 perfil: 'Usuário'
             };
             
-            // Salvar sessão
             localStorage.setItem('mfbd_sessao', JSON.stringify(usuarioAtual));
-            
             mostrarToast('✅ Login realizado com sucesso!', 'success');
             
-            // Resetar tentativas
             tentativasLogin = 0;
             
-            // Mostrar sistema
             setTimeout(() => {
                 if (loadingElement) loadingElement.style.display = 'none';
                 mostrarSistema();
@@ -242,7 +270,6 @@ async function fazerLogin(event) {
             }, 1000);
             
         } else {
-            // Login falhou
             const mensagem = data?.mensagem || '❌ Email ou senha inválidos';
             mostrarErro(mensagem);
             
@@ -260,21 +287,18 @@ async function fazerLogin(event) {
     }
 }
 
-// Mostrar mensagem de erro
 function mostrarErro(mensagem) {
     const erroElement = document.getElementById('login-erro');
     if (erroElement) {
         erroElement.textContent = mensagem;
         erroElement.style.display = 'block';
         
-        // Esconder após 5 segundos
         setTimeout(() => {
             erroElement.style.display = 'none';
         }, 5000);
     }
 }
 
-// Toggle mostrar senha
 function toggleSenha() {
     const senhaInput = document.getElementById('login-senha');
     const toggleBtn = document.querySelector('.toggle-senha');
@@ -292,18 +316,15 @@ function toggleSenha() {
     }
 }
 
-// Logout
 function fazerLogout() {
     localStorage.removeItem('mfbd_sessao');
     usuarioAtual = null;
     
-    // Limpar header
     const userInfo = document.getElementById('user-info-header');
     if (userInfo) userInfo.innerHTML = '';
     
     mostrarTelaLogin();
     
-    // Limpar campos
     const emailInput = document.getElementById('login-email');
     const senhaInput = document.getElementById('login-senha');
     const erroElement = document.getElementById('login-erro');
@@ -314,7 +335,6 @@ function fazerLogout() {
     if (erroElement) erroElement.style.display = 'none';
     if (loadingElement) loadingElement.style.display = 'none';
     
-    // Resetar botão
     const btnLogin = document.querySelector('.btn-login');
     if (btnLogin) {
         btnLogin.innerHTML = '🔐 Entrar no Sistema';
@@ -324,7 +344,6 @@ function fazerLogout() {
     mostrarToast('👋 Logout realizado', 'success');
 }
 
-// Verificar tecla Enter nos campos de login
 document.addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
         const telaLogin = document.getElementById('tela-login');
@@ -335,17 +354,15 @@ document.addEventListener('keypress', function(e) {
 });
 
 // ========== SISTEMA DE PRECIFICAÇÃO MFBD ==========
-// Versão 5.0 - Com exclusão/edição em TODAS as abas via Google Sheets
+// Versão 6.0 - Com salvamento completo de salários
 // ==================================================
 
 let historico = JSON.parse(localStorage.getItem('historicoSmartPrice') || '[]');
 let indiceEditando = -1;
 
 // ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
-// SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwaktaVKSQUnVvVRDgr5tI7MKZVPOU1EAbetf5NyRKGPIzI3IpZfAoPTNjUaRYnPUJE/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxQMX9HP_f7eByOwt3qiRUo66kp5tXXF6zJmFBY53bpG7NY6QxjaQSLvzGME8gS8ppL/exec';
 
-// ========== FUNÇÕES DE NOTIFICAÇÃO ==========
 function mostrarToast(mensagem, tipo = 'success') {
     const toast = document.createElement('div');
     toast.className = `toast ${tipo}`;
@@ -361,7 +378,6 @@ function mostrarToast(mensagem, tipo = 'success') {
     }, 3000);
 }
 
-// ========== FUNÇÕES DE UTILIDADE ==========
 function showTab(tabName) {
     document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -379,7 +395,6 @@ function fecharModal() {
     document.getElementById('modalEdicao').classList.remove('active');
 }
 
-// ========== GERENCIAMENTO DE PERFIS ==========
 function adicionarPerfil() {
     const container = document.getElementById('perfis-container');
     const div = document.createElement('div');
@@ -412,7 +427,6 @@ function removerPerfil(botao) {
     }
 }
 
-// ========== CÁLCULO DE CUSTOS ==========
 function getCustoHora(perfil) {
     const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
     const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
@@ -458,7 +472,6 @@ function calcularBuffer() {
     return (bufferComplexidade[complexidade] + bufferUrgencia[urgencia]) / 100;
 }
 
-// ========== COLETA E PREENCHIMENTO DE DADOS ==========
 function coletarDadosInput() {
     const perfis = document.querySelectorAll('.perfil-row');
     const perfisData = [];
@@ -561,9 +574,11 @@ function preencherInputComDados(dados) {
     }
 }
 
-// ========== FUNÇÃO PRINCIPAL DE CÁLCULO ==========
+// ========== FUNÇÃO PRINCIPAL DE CÁLCULO CORRIGIDA ==========
 function calcular() {
     try {
+        const salariosAtuais = coletarSalariosAtualizados();
+        
         const perfis = document.querySelectorAll('.perfil-row');
         let custoTotal = 0;
         let detalhamento = [];
@@ -576,7 +591,8 @@ function calcular() {
                 const perfilNome = select.options[select.selectedIndex].text;
                 const perfilValue = select.value;
                 const perfilId = perfilValue.charAt(0).toUpperCase() + perfilValue.slice(1);
-                const custoHora = getCustoHora(perfilId);
+                
+                const custoHora = getCustoHoraComSalarios(perfilId, salariosAtuais);
                 const custo = custoHora * horas;
                 
                 custoTotal += custo;
@@ -586,7 +602,7 @@ function calcular() {
 
         const buffer = calcularBuffer();
         const custoComBuffer = custoTotal * (1 + buffer);
-        const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+        const overheadTotal = salariosAtuais.overheadTotal;
 
         const percImpostos = parseFloat(document.getElementById('impostos')?.value) || 11.33;
         const impostos = custoComBuffer * (percImpostos / 100);
@@ -617,7 +633,6 @@ function calcular() {
         const desconto = parseFloat(document.getElementById('desconto').value) || 0;
         const precoComDesconto = precoAlvo * (1 - desconto/100);
 
-        // Atualizar UI com formatação brasileira
         document.getElementById('preco-piso').innerHTML = formatarMoeda(precoPiso);
         document.getElementById('preco-alvo').innerHTML = formatarMoeda(precoAlvo);
         document.getElementById('preco-premium').innerHTML = formatarMoeda(precoPremium);
@@ -640,7 +655,6 @@ function calcular() {
         document.getElementById('output-parcelas').innerHTML = `${parcelas}x ${formatarMoeda(valorParcelas)}`;
         document.getElementById('output-total-juros').innerHTML = formatarMoeda(valorTotalJuros);
 
-        // Alertas
         const alertas = [];
         
         if (precoComDesconto < precoPiso) {
@@ -678,7 +692,6 @@ function calcular() {
             });
         }
 
-        // Tabela de cálculo
         const corpoCalculo = document.getElementById('corpo-calculo');
         corpoCalculo.innerHTML = '';
         
@@ -706,9 +719,9 @@ function calcular() {
         document.getElementById('composicao-base').innerHTML = formatarMoeda(custoBase);
         document.getElementById('composicao-margem').innerHTML = formatarMoeda(precoAlvo - custoBase);
 
-        // ===== PREPARAR DADOS COMPLETOS PARA SALVAR =====
         window.ultimoResultado = {
             ...coletarDadosInput(),
+            ...salariosAtuais,
             margemHora: parseFloat(document.getElementById('margemHora')?.value) || 55,
             margemFechado: parseFloat(document.getElementById('margemFechado')?.value) || 47,
             margemRetainer: parseFloat(document.getElementById('margemRetainer')?.value) || 52,
@@ -725,7 +738,7 @@ function calcular() {
             bufferNormal: parseFloat(document.getElementById('bufferNormal')?.value) || 0,
             bufferUrgencia: parseFloat(document.getElementById('bufferUrgencia')?.value) || 20,
             overheadTotal: overheadTotal,
-            horasTotais: parseFloat(document.getElementById('horasTotais')?.value) || 840,
+            horasTotais: salariosAtuais.horasTotais,
             buffer: buffer,
             custoTotalMO: custoTotal,
             detalhamentoCalculo: detalhamento,
@@ -830,7 +843,6 @@ async function testarConexaoGoogle() {
     }
 }
 
-// ========== FUNÇÃO DE LIMPEZA DE CAMPOS ==========
 function limparCamposAposEnvio() {
     const campoCliente = document.getElementById('cliente');
     if (campoCliente) campoCliente.value = '';
@@ -842,7 +854,6 @@ function limparCamposAposEnvio() {
     console.log('🧹 Campos Cliente e Escopo limpos');
 }
 
-// ========== FUNÇÃO DE SALVAR NO HISTÓRICO (CORRIGIDA) ==========
 async function salvarHistorico(event) {
     if (!window.ultimoResultado) {
         mostrarToast('❌ Calcule um preço primeiro!', 'warning');
@@ -859,7 +870,6 @@ async function salvarHistorico(event) {
     try {
         const isEditando = indiceEditando !== -1;
         
-        // Garantir que margem e preco sejam números
         const resultadoParaSalvar = {
             ...window.ultimoResultado,
             margem: parseFloat(window.ultimoResultado.margem) || 0,
@@ -906,8 +916,6 @@ async function salvarHistorico(event) {
         }
     }
 }
-
-// ========== FUNÇÕES DE EXPORTAÇÃO ==========
 
 function exportarExcel() {
     try {
@@ -1013,14 +1021,11 @@ function exportarPDF() {
     }
 }
 
-// ========== FUNÇÕES DO HISTÓRICO (CORRIGIDAS) ==========
-
 function editarItem(indiceReal) {
     const item = historico[indiceReal];
     if (item) {
         indiceEditando = indiceReal;
         
-        // Garantir que os valores numéricos sejam números
         const itemParaEditar = {
             ...item,
             preco: parseFloat(item.preco) || 0,
@@ -1063,7 +1068,6 @@ function abrirModalEdicao(indiceReal) {
     const modal = document.getElementById('modalEdicao');
     const conteudo = document.getElementById('modal-conteudo');
     
-    // Garantir que os valores sejam números
     const preco = parseFloat(item.preco) || 0;
     const margem = parseFloat(item.margem) || 0;
     
@@ -1119,7 +1123,6 @@ function atualizarHistorico() {
         const indiceReal = historico.findIndex(h => h.id === item.id);
         if (indiceReal === -1) return;
         
-        // Garantir que os valores sejam números
         const preco = parseFloat(item.preco) || 0;
         const margem = parseFloat(item.margem) || 0;
         
@@ -1165,7 +1168,6 @@ function exportarHistorico() {
     mostrarToast('📤 Histórico exportado!', 'success');
 }
 
-// ========== FUNÇÃO PARA ATUALIZAR TODOS OS CUSTOS ==========
 function atualizarTodosCustos() {
     const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
     const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
@@ -1196,13 +1198,11 @@ function atualizarTodosCustos() {
     });
 }
 
-// ========== FUNÇÃO PARA LIMPAR HISTÓRICO CORROMPIDO ==========
 function limparHistoricoCorrompido() {
     try {
         const historicoLimpo = [];
         
         historico.forEach(item => {
-            // Tentar converter valores para números
             const itemLimpo = {
                 ...item,
                 preco: parseFloat(item.preco) || 0,
@@ -1227,26 +1227,21 @@ function limparHistoricoCorrompido() {
     }
 }
 
-// ========== INICIALIZAÇÃO ==========
 window.onload = function() {
-    console.log('🚀 Inicializando MFBD v5.0...');
+    console.log('🚀 Inicializando MFBD v6.0...');
     
-    // Primeiro verificar se já está logado
     verificarSessao();
     
-    // Restante da inicialização
     if (typeof historico !== 'undefined' && historico) {
         historico.sort((a, b) => new Date(b.data) - new Date(a.data));
     }
     
-    // Adicionar primeiro perfil se necessário
     setTimeout(() => {
         if (document.querySelectorAll('.perfil-row').length === 0) {
             adicionarPerfil();
         }
     }, 200);
     
-    // Configurar radio buttons
     document.querySelectorAll('.radio-option').forEach(option => {
         option.addEventListener('click', function() {
             const radio = this.querySelector('input[type="radio"]');
@@ -1258,7 +1253,6 @@ window.onload = function() {
         });
     });
     
-    // Configurar inputs de custo
     const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
     perfis.forEach(perfil => {
         const salario = document.getElementById(`salario${perfil}`);
@@ -1284,5 +1278,5 @@ window.onload = function() {
     atualizarHistorico();
     indiceEditando = -1;
     
-    console.log('✅ MFBD - Sistema carregado v5.0');
+    console.log('✅ MFBD - Sistema carregado v6.0');
 };
