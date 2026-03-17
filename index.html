@@ -4,1986 +4,570 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>MFBD - Precificação Inteligente</title>
-    <style>
-        /* SEU CSS EXISTENTE PERMANECE IGUAL */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 12px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            color: white;
-            padding: 24px 20px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: clamp(22px, 6vw, 32px);
-            font-weight: 700;
-            margin-bottom: 6px;
-            letter-spacing: -0.5px;
-        }
-
-        .header p {
-            font-size: clamp(13px, 4vw, 15px);
-            opacity: 0.9;
-        }
-
-        .tabs {
-            display: flex;
-            background: #f1f5f9;
-            padding: 0 12px;
-            gap: 4px;
-            overflow-x: auto;
-            scrollbar-width: none;
-            white-space: nowrap;
-            -webkit-overflow-scrolling: touch;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .tabs::-webkit-scrollbar {
-            display: none;
-        }
-
-        .tab {
-            padding: 16px 14px;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            color: #475569;
-            font-size: clamp(13px, 3.8vw, 15px);
-            transition: all 0.2s;
-            border-bottom: 3px solid transparent;
-            flex: 0 0 auto;
-        }
-
-        .tab.active {
-            color: #3b82f6;
-            border-bottom-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.05);
-        }
-
-        .tab-content {
-            display: none;
-            padding: 24px 20px;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fade 0.3s ease;
-        }
-
-        @keyframes fade {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        h2 {
-            color: #0f172a;
-            font-size: clamp(20px, 5.5vw, 26px);
-            font-weight: 700;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        h2::before {
-            content: '';
-            width: 5px;
-            height: 28px;
-            background: #3b82f6;
-            border-radius: 4px;
-            display: inline-block;
-        }
-
-        h3 {
-            color: #334155;
-            font-size: clamp(16px, 4.5vw, 18px);
-            font-weight: 600;
-            margin: 20px 0 15px;
-        }
-
-        .grid-2, .grid-3, .grid-4 {
-            display: grid;
-            gap: 20px;
-        }
-
-        .grid-2 { grid-template-columns: 1fr; }
-        .grid-3 { grid-template-columns: 1fr; }
-        .grid-4 { grid-template-columns: 1fr; }
-
-        @media (min-width: 640px) {
-            .grid-2 { grid-template-columns: repeat(2, 1fr); }
-        }
-        
-        @media (min-width: 768px) {
-            .grid-3 { grid-template-columns: repeat(3, 1fr); }
-            .grid-4 { grid-template-columns: repeat(4, 1fr); }
-        }
-
-        .card {
-            background: #f8fafc;
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s;
-        }
-
-        .card:hover {
-            border-color: #3b82f6;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            font-weight: 600;
-            color: #475569;
-            font-size: clamp(12px, 3.5vw, 14px);
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        input, select, textarea {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 14px;
-            font-size: clamp(14px, 4vw, 15px);
-            background: white;
-            transition: all 0.2s;
-            -webkit-appearance: none;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        textarea {
-            min-height: 80px;
-            resize: vertical;
-        }
-
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        @media (min-width: 480px) {
-            .radio-group {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-        }
-
-        .radio-option {
-            background: white;
-            border: 2px solid #e2e8f0;
-            border-radius: 30px;
-            padding: 10px 18px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            flex: 1 1 auto;
-        }
-
-        .radio-option.selected {
-            border-color: #3b82f6;
-            background: #eff6ff;
-        }
-
-        .radio-option input[type="radio"] {
-            width: auto;
-            margin: 0;
-            accent-color: #3b82f6;
-        }
-
-        .btn {
-            padding: 14px 24px;
-            border: none;
-            border-radius: 30px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: clamp(14px, 4vw, 16px);
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            margin-bottom: 8px;
-        }
-
-        @media (min-width: 480px) {
-            .btn {
-                width: auto;
-                margin-bottom: 0;
-            }
-        }
-
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        .btn-primary:hover {
-            background: #2563eb;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #94a3b8;
-            color: white;
-        }
-
-        .btn-success {
-            background: #10b981;
-            color: white;
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-        }
-
-        .btn-warning {
-            background: #f59e0b;
-            color: white;
-        }
-
-        .perfil-row {
-            background: white;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
-            border: 1px solid #e2e8f0;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            position: relative;
-        }
-
-        @media (min-width: 480px) {
-            .perfil-row {
-                grid-template-columns: 2fr 1fr 1fr 40px;
-                align-items: center;
-                padding: 12px;
-            }
-        }
-
-        .perfil-row select,
-        .perfil-row input {
-            width: 100%;
-        }
-
-        .custo-previsto {
-            font-weight: 700;
-            color: #059669;
-            text-align: right;
-            font-size: clamp(15px, 4.2vw, 17px);
-            padding: 8px 0;
-        }
-
-        .remove-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 36px;
-            height: 36px;
-            border-radius: 18px;
-            background: #fee2e2;
-            color: #dc2626;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        @media (min-width: 480px) {
-            .remove-btn {
-                position: static;
-                width: 36px;
-                height: 36px;
-            }
-        }
-
-        .price-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-            margin: 20px 0;
-        }
-
-        @media (min-width: 480px) {
-            .price-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-
-        .price-box {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-radius: 20px;
-            padding: 24px 16px;
-            text-align: center;
-            border: 1px solid #e2e8f0;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .price-box::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-        }
-
-        .price-box.piso::before { background: #ef4444; }
-        .price-box.alvo::before { background: #3b82f6; }
-        .price-box.premium::before { background: #f59e0b; }
-
-        .price-box h4 {
-            color: #64748b;
-            font-size: clamp(13px, 3.8vw, 15px);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-        }
-
-        .price-box .price {
-            font-size: clamp(28px, 7vw, 38px);
-            font-weight: 800;
-            color: #0f172a;
-            line-height: 1.2;
-        }
-
-        .alert {
-            padding: 14px 16px;
-            border-radius: 14px;
-            margin-bottom: 12px;
-            font-weight: 500;
-            font-size: clamp(13px, 3.8vw, 14px);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .alert-critical {
-            background: #fee2e2;
-            color: #b91c1c;
-            border-left: 4px solid #dc2626;
-        }
-
-        .alert-warning {
-            background: #ffedd5;
-            color: #9a3412;
-            border-left: 4px solid #f97316;
-        }
-
-        .alert-success {
-            background: #dcfce7;
-            color: #166534;
-            border-left: 4px solid #22c55e;
-        }
-
-        .table-responsive {
-            overflow-x: auto;
-            margin: 0 -4px;
-            padding: 4px;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        th {
-            background: #1e293b;
-            color: white;
-            padding: 14px 12px;
-            font-weight: 600;
-            font-size: clamp(12px, 3.5vw, 14px);
-            text-align: left;
-        }
-
-        td {
-            padding: 12px;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: clamp(13px, 3.8vw, 14px);
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 30px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .badge-success { background: #d1fae5; color: #065f46; }
-        .badge-warning { background: #fed7aa; color: #92400e; }
-        .badge-danger { background: #fee2e2; color: #b91c1c; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 24px;
-            padding: 24px;
-            max-width: 500px;
-            width: 100%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #64748b;
-        }
-
-        .historico-item {
-            background: #f8fafc;
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
-            border: 1px solid #e2e8f0;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .historico-item:hover {
-            border-color: #3b82f6;
-            transform: translateX(4px);
-        }
-
-        .historico-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .historico-titulo {
-            font-weight: 700;
-            font-size: clamp(15px, 4.2vw, 17px);
-            color: #0f172a;
-        }
-
-        .historico-acoes {
-            display: flex;
-            gap: 6px;
-        }
-
-        .historico-acoes button {
-            width: 36px;
-            height: 36px;
-            border-radius: 18px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        .button-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        @media (min-width: 480px) {
-            .button-group {
-                flex-direction: row;
-                justify-content: flex-end;
-            }
-        }
-
-        .info-text {
-            color: #64748b;
-            font-size: 12px;
-            margin-top: 4px;
-        }
-
-        .mt-4 { margin-top: 20px; }
-        .mb-2 { margin-bottom: 10px; }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        
-        /* Estilos para notificações */
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            color: #1e293b;
-            padding: 12px 24px;
-            border-radius: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            z-index: 9999;
-            animation: slideIn 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-left: 4px solid #3b82f6;
-            max-width: 350px;
-        }
-        
-        .toast.success { border-left-color: #10b981; }
-        .toast.error { border-left-color: #ef4444; }
-        .toast.warning { border-left-color: #f59e0b; }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1> MFBD </h1>
-            <p>Precificação Inteligente • v5.0 • Integração Google Sheets</p>
-        </div>
-
-        <div class="tabs">
-            <button class="tab active" onclick="showTab('input')">📋 INPUT</button>
-            <button class="tab" onclick="showTab('tabelas')">⚙️ TABELAS</button>
-            <button class="tab" onclick="showTab('calculo')">🔬 CÁLCULO</button>
-            <button class="tab" onclick="showTab('output')">📊 OUTPUT</button>
-            <button class="tab" onclick="showTab('historico')">📚 HISTÓRICO</button>
-        </div>
-
-        <!-- ABA 1 - INPUT -->
-        <div id="input" class="tab-content active">
-            <h2>📝 Dados do Cliente e Negócio</h2>
+    <!-- TELA DE LOGIN -->
+    <div id="tela-login" class="tela-login">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>MFBD</h1>
+                <p>Precificação Inteligente</p>
+            </div>
             
-            <div class="grid-2">
-                <div class="card">
-                    <h3>Cliente / Negócio</h3>
-                    <div class="form-group">
-                        <label>Cliente (nome)</label>
-                        <input type="text" id="cliente" placeholder="Ex: Empresa XYZ" value="">
-                    </div>
-                    <div class="form-group">
-                        <label>Segmento</label>
-                        <select id="segmento">
-                            <option value="tecnologia">Tecnologia</option>
-                            <option value="varejo">Varejo</option>
-                            <option value="industria">Indústria</option>
-                            <option value="servicos">Serviços</option>
-                            <option value="saude">Saúde</option>
-                            <option value="educacao">Educação</option>
-                            <option value="financeiro">Financeiro</option>
-                            <option value="consultoria">Consultoria</option>
-                            <option value="marketing">Marketing</option>
-                            <option value="outros">Outros</option>
-                        </select>
-                    </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>Tipo</label>
-                            <select id="tipo">
-                                <option value="novo">Novo</option>
-                                <option value="recorrente">Recorrente</option>
-                                <option value="indicacao">Indicação</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Risco de inadimplência</label>
-                            <select id="risco">
-                                <option value="baixo">Baixo</option>
-                                <option value="medio">Médio</option>
-                                <option value="alto">Alto</option>
-                            </select>
-                        </div>
-                    </div>
+            <form onsubmit="fazerLogin(event)" class="login-form">
+                <div class="login-error" id="login-erro" style="display: none;">
+                    ⚠️ Email ou senha inválidos
                 </div>
-
-                <div class="card">
-                    <h3>Serviço / Produto</h3>
-                    <div class="form-group">
-                        <label>Produto/serviço (Top 10)</label>
-                        <select id="produto">
-                            <option value="consultoria">Consultoria Estratégica</option>
-                            <option value="desenvolvimento">Desenvolvimento de Software</option>
-                            <option value="design">Design UX/UI</option>
-                            <option value="marketing">Marketing Digital</option>
-                            <option value="suporte">Suporte Técnico</option>
-                            <option value="treinamento">Treinamento</option>
-                            <option value="implementacao">Implementação</option>
-                            <option value="manutencao">Manutenção</option>
-                            <option value="analise">Análise de Dados</option>
-                            <option value="cloud">Cloud Computing</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Escopo (texto curto)</label>
-                        <textarea id="escopo" rows="2" placeholder="Descreva o escopo do serviço..."></textarea>
-                    </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>Complexidade</label>
-                            <select id="complexidade">
-                                <option value="baixa">Baixa</option>
-                                <option value="media">Média</option>
-                                <option value="alta">Alta</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Urgência</label>
-                            <select id="urgencia">
-                                <option value="normal">Normal</option>
-                                <option value="urgente">Urgente</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <h2>💰 Modelo de Cobrança</h2>
-            <div class="card">
-                <div class="radio-group" id="modeloCobranca">
-                    <label class="radio-option selected">
-                        <input type="radio" name="cobranca" value="hora" checked> Hora
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="cobranca" value="fechado"> Preço fechado
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="cobranca" value="retainer"> Retainer (mensal)
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="cobranca" value="exito"> Êxito apenas
-                    </label>
-                    <label class="radio-option">
-                        <input type="radio" name="cobranca" value="hibrido"> Híbrido (Retainer + Êxito / Fechado + Êxito)
-                    </label>
-                </div>
-            </div>
-
-            <h2>👥 Equipe e Esforço</h2>
-            <div class="card">
-                <div id="perfis-container"></div>
-                <button class="btn btn-secondary" onclick="adicionarPerfil()" style="width: 100%;">+ Adicionar Perfil</button>
                 
-                <div class="form-group mt-4">
-                    <label>% de risco de escopo (buffer automático)</label>
-                    <input type="number" id="riscoEscopo" value="20" min="0" max="100" step="1">
-                    <div class="info-text">Buffer sugerido: Baixa +10% | Média +20% | Alta +30%</div>
+                <div class="form-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="login-email" placeholder="seu@email.com" required autocomplete="off">
                 </div>
-            </div>
-
-            <h2>📊 Condições Comerciais</h2>
-            <div class="grid-3">
-                <div class="card">
-                    <h3>Financeiro</h3>
-                    <div class="form-group">
-                        <label>Entrada (%)</label>
-                        <input type="number" id="entrada" value="50" min="0" max="100" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label>Parcelamento (nº parcelas)</label>
-                        <input type="number" id="parcelas" value="1" min="1" max="24" step="1">
-                    </div>
-                    <div class="form-group">
-                        <label>Desconto pretendido (%)</label>
-                        <input type="number" id="desconto" value="0" min="0" max="30" step="0.5">
+                
+                <div class="form-group">
+                    <label>🔐 Senha</label>
+                    <div style="position: relative;">
+                        <input type="password" id="login-senha" placeholder="••••••••" required style="padding-right: 45px;">
+                        <button type="button" class="toggle-senha" onclick="toggleSenha()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px;">👁️</button>
                     </div>
                 </div>
-
-                <div class="card">
-                    <h3>Parcerias</h3>
-                    <div class="form-group">
-                        <label>Se há parceiro</label>
-                        <select id="parceiro">
-                            <option value="nao">Não</option>
-                            <option value="sim">Sim</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>% parceiro (se aplicável)</label>
-                        <input type="number" id="percParceiro" value="0" min="0" max="50" step="0.5">
-                    </div>
+                
+                <div id="login-loading" style="display: none; text-align: center; margin: 10px 0;">
+                    <span class="spinner" style="width: 30px; height: 30px;"></span>
+                    <p style="color: #64748b; margin-top: 5px;">Verificando credenciais...</p>
                 </div>
-
-                <div class="card">
-                    <h3>CS (Compensation System)</h3>
-                    <div class="form-group">
-                        <label>Se aplica CS</label>
-                        <select id="aplicaCS">
-                            <option value="sim">Sim</option>
-                            <option value="nao">Não</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>% CS (padrão)</label>
-                        <input type="number" id="percCS" value="7.5" min="0" max="20" step="0.1">
-                    </div>
+                
+                <button type="submit" class="btn-login">
+                    🔐 Entrar no Sistema
+                </button>
+                
+                <div class="login-footer">
+                    <small>MFBD v5.0 • Sistema Protegido</small>
                 </div>
-            </div>
-
-            <div class="button-group">
-                <button class="btn btn-primary" onclick="calcular()">🚀 CALCULAR PREÇO</button>
-            </div>
+            </form>
         </div>
+    </div>
 
-        <!-- ABA 2 - TABELAS (parâmetros) -->
-        <div id="tabelas" class="tab-content">
-            <h2>⚙️ Parâmetros da Planilha</h2>
-            
-            <h3>1) Custo-hora por perfil (fully loaded)</h3>
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Perfil</th>
-                            <th>Salário</th>
-                            <th>Encargos (72%)</th>
-                            <th>Benefícios</th>
-                            <th>Total Mensal</th>
-                            <th>Horas Prod.</th>
-                            <th>Overhead/h</th>
-                            <th>Custo/hora</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Estagiário</td>
-                            <td><input type="number" id="salarioEstag" value="1800" step="100" style="width: 85px;"></td>
-                            <td id="encargosEstag">1296</td>
-                            <td><input type="number" id="beneficiosEstag" value="400" step="50" style="width: 70px;"></td>
-                            <td id="totalMensalEstag">3496</td>
-                            <td><input type="number" id="horasEstag" value="140" step="5" style="width: 70px;"></td>
-                            <td id="overheadHoraEstag">0</td>
-                            <td id="custoHoraEstag">24.97</td>
-                        </tr>
-                        <tr>
-                            <td>Júnior</td>
-                            <td><input type="number" id="salarioJr" value="3500" step="100" style="width: 85px;"></td>
-                            <td id="encargosJr">2520</td>
-                            <td><input type="number" id="beneficiosJr" value="600" step="50" style="width: 70px;"></td>
-                            <td id="totalMensalJr">6620</td>
-                            <td><input type="number" id="horasJr" value="140" step="5" style="width: 70px;"></td>
-                            <td id="overheadHoraJr">0</td>
-                            <td id="custoHoraJr">47.29</td>
-                        </tr>
-                        <tr>
-                            <td>Pleno</td>
-                            <td><input type="number" id="salarioPl" value="6500" step="100" style="width: 85px;"></td>
-                            <td id="encargosPl">4680</td>
-                            <td><input type="number" id="beneficiosPl" value="800" step="50" style="width: 70px;"></td>
-                            <td id="totalMensalPl">11980</td>
-                            <td><input type="number" id="horasPl" value="140" step="5" style="width: 70px;"></td>
-                            <td id="overheadHoraPl">0</td>
-                            <td id="custoHoraPl">85.57</td>
-                        </tr>
-                        <tr>
-                            <td>Sênior</td>
-                            <td><input type="number" id="salarioSr" value="10000" step="100" style="width: 85px;"></td>
-                            <td id="encargosSr">7200</td>
-                            <td><input type="number" id="beneficiosSr" value="1000" step="50" style="width: 70px;"></td>
-                            <td id="totalMensalSr">18200</td>
-                            <td><input type="number" id="horasSr" value="140" step="5" style="width: 70px;"></td>
-                            <td id="overheadHoraSr">0</td>
-                            <td id="custoHoraSr">130.00</td>
-                        </tr>
-                        <tr>
-                            <td>Coordenador</td>
-                            <td><input type="number" id="salarioCoord" value="14000" step="100" style="width: 85px;"></td>
-                            <td id="encargosCoord">10080</td>
-                            <td><input type="number" id="beneficiosCoord" value="1200" step="50" style="width: 70px;"></td>
-                            <td id="totalMensalCoord">25280</td>
-                            <td><input type="number" id="horasCoord" value="140" step="5" style="width: 70px;"></td>
-                            <td id="overheadHoraCoord">0</td>
-                            <td id="custoHoraCoord">180.57</td>
-                        </tr>
-                        <tr>
-                            <td>Sócio</td>
-                            <td><input type="number" id="salarioSocio" value="20000" step="100" style="width: 85px;"></td>
-                            <td id="encargosSocio">14400</td>
-                            <td><input type="number" id="beneficiosSocio" value="1500" step="50" style="width: 70px;"></td>
-                            <td id="totalMensalSocio">35900</td>
-                            <td><input type="number" id="horasSocio" value="140" step="5" style="width: 70px;"></td>
-                            <td id="overheadHoraSocio">0</td>
-                            <td id="custoHoraSocio">256.43</td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- SISTEMA PRINCIPAL -->
+    <div id="sistema-principal" style="display: none;">
+        <div class="container">
+            <div class="header">
+                <h1> MFBD </h1>
+                <p>Precificação Inteligente • v5.0 • Integração Google Sheets</p>
+                <div id="user-info-header" class="user-info-header"></div>
             </div>
 
-            <div class="grid-2">
-                <div class="card">
-                    <h3>2) Margens-alvo por tipo de cobrança</h3>
-                    <table>
-                        <tr><td>Hora</td><td><input type="number" id="margemHora" value="55" min="30" max="80" step="1">%</td></tr>
-                        <tr><td>Preço fechado</td><td><input type="number" id="margemFechado" value="47" min="30" max="80" step="1">%</td></tr>
-                        <tr><td>Retainer (mensal)</td><td><input type="number" id="margemRetainer" value="52" min="30" max="80" step="1">%</td></tr>
-                        <tr><td>Êxito apenas</td><td><input type="number" id="margemExito" value="65" min="40" max="90" step="1">%</td></tr>
-                        <tr><td>Híbrido</td><td><input type="number" id="margemHibrido" value="50" min="30" max="80" step="1">%</td></tr>
-                    </table>
-                </div>
-
-                <div class="card">
-                    <h3>3) Impostos / taxas</h3>
-                    <div class="form-group">
-                        <label>Regime tributário</label>
-                        <select id="regimeTributario">
-                            <option value="lucro_presumido">Lucro Presumido</option>
-                            <option value="lucro_real">Lucro Real</option>
-                            <option value="simples">Simples Nacional</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>% médio de impostos sobre receita</label>
-                        <input type="number" id="impostos" value="11.33" step="0.01">
-                    </div>
-                    <div class="form-group">
-                        <label>Taxa de parcelamento (% ao mês)</label>
-                        <input type="number" id="taxaParcelamento" value="1" step="0.1">
-                    </div>
-                </div>
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('input')">📋 INPUT</button>
+                <button class="tab" onclick="showTab('tabelas')">⚙️ TABELAS</button>
+                <button class="tab" onclick="showTab('calculo')">🔬 CÁLCULO</button>
+                <button class="tab" onclick="showTab('output')">📊 OUTPUT</button>
+                <button class="tab" onclick="showTab('historico')">📚 HISTÓRICO</button>
             </div>
 
-            <div class="grid-2">
-                <div class="card">
-                    <h3>4) CS (Compensation System)</h3>
-                    <div class="form-group">
-                        <label>Percentual padrão CS</label>
-                        <input type="number" id="csPadrao" value="7.5" step="0.1">%
-                    </div>
-                    <div class="form-group">
-                        <label>Base do CS</label>
-                        <select id="baseCS">
-                            <option value="liquido">Somente sobre recebimento líquido</option>
-                            <option value="bruto">Sobre valor bruto</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h3>5) Buffers automáticos</h3>
-                    <div class="grid-2">
-                        <div>
-                            <label>Complexidade Baixa</label>
-                            <input type="number" id="bufferBaixa" value="10" step="1">%
-                        </div>
-                        <div>
-                            <label>Complexidade Média</label>
-                            <input type="number" id="bufferMedia" value="20" step="1">%
-                        </div>
-                        <div>
-                            <label>Complexidade Alta</label>
-                            <input type="number" id="bufferAlta" value="30" step="1">%
-                        </div>
-                        <div>
-                            <label>Urgência Normal</label>
-                            <input type="number" id="bufferNormal" value="0" step="1">%
-                        </div>
-                        <div>
-                            <label>Urgência Urgente</label>
-                            <input type="number" id="bufferUrgente" value="20" step="1">%
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>Overhead</h3>
+            <!-- ABA 1 - INPUT -->
+            <div id="input" class="tab-content active">
+                <h2>📝 Dados do Cliente e Negócio</h2>
+                
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>Overhead mensal total (R$)</label>
-                        <input type="number" id="overheadTotal" value="45000" step="1000">
+                    <div class="card">
+                        <h3>Cliente / Negócio</h3>
+                        <div class="form-group">
+                            <label>Cliente (nome)</label>
+                            <input type="text" id="cliente" placeholder="Ex: Empresa XYZ" value="">
+                        </div>
+                        <div class="form-group">
+                            <label>Segmento</label>
+                            <select id="segmento">
+                                <option value="tecnologia">Tecnologia</option>
+                                <option value="varejo">Varejo</option>
+                                <option value="industria">Indústria</option>
+                                <option value="servicos">Serviços</option>
+                                <option value="saude">Saúde</option>
+                                <option value="educacao">Educação</option>
+                                <option value="financeiro">Financeiro</option>
+                                <option value="consultoria">Consultoria</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Tipo</label>
+                                <select id="tipo">
+                                    <option value="novo">Novo</option>
+                                    <option value="recorrente">Recorrente</option>
+                                    <option value="indicacao">Indicação</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Risco de inadimplência</label>
+                                <select id="risco">
+                                    <option value="baixo">Baixo</option>
+                                    <option value="medio">Médio</option>
+                                    <option value="alto">Alto</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Total horas produtivas/mês</label>
-                        <input type="number" id="horasTotais" value="840" step="10">
+
+                    <div class="card">
+                        <h3>Serviço / Produto</h3>
+                        <div class="form-group">
+                            <label>Produto/serviço (Top 10)</label>
+                            <select id="produto">
+                                <option value="consultoria">Consultoria Estratégica</option>
+                                <option value="desenvolvimento">Desenvolvimento de Software</option>
+                                <option value="design">Design UX/UI</option>
+                                <option value="marketing">Marketing Digital</option>
+                                <option value="suporte">Suporte Técnico</option>
+                                <option value="treinamento">Treinamento</option>
+                                <option value="implementacao">Implementação</option>
+                                <option value="manutencao">Manutenção</option>
+                                <option value="analise">Análise de Dados</option>
+                                <option value="cloud">Cloud Computing</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Escopo (texto curto)</label>
+                            <textarea id="escopo" rows="2" placeholder="Descreva o escopo do serviço..."></textarea>
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Complexidade</label>
+                                <select id="complexidade">
+                                    <option value="baixa">Baixa</option>
+                                    <option value="media">Média</option>
+                                    <option value="alta">Alta</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Urgência</label>
+                                <select id="urgencia">
+                                    <option value="normal">Normal</option>
+                                    <option value="urgente">Urgente</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="info-text">Overhead por hora: R$ <span id="overheadPorHora">53.57</span></div>
-            </div>
-        </div>
 
-        <!-- ABA 3 - CÁLCULO (memória transparente) -->
-        <div id="calculo" class="tab-content">
-            <h2>🔬 Memória de Cálculo</h2>
-            
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Perfil</th>
-                            <th>Horas</th>
-                            <th>Custo/h</th>
-                            <th>Subtotal</th>
-                            <th>Buffer</th>
-                            <th>Total c/ buffer</th>
-                        </tr>
-                    </thead>
-                    <tbody id="corpo-calculo"></tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="5"><strong>Total Mão de Obra</strong></td>
-                            <td id="total-mao-obra">R$ 0,00</td>
-                        </tr>
-                        <tr>
-                            <td colspan="5"><strong>Overhead</strong></td>
-                            <td id="total-overhead">R$ 0,00</td>
-                        </tr>
-                        <tr>
-                            <td colspan="5"><strong>Subtotal</strong></td>
-                            <td id="subtotal-geral">R$ 0,00</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            <div class="card mt-4">
-                <h3>Composição do Preço</h3>
-                <table>
-                    <tr><td>Custo total (MO + Overhead):</td><td id="composicao-custo">R$ 0,00</td></tr>
-                    <tr><td>Impostos (11.33%):</td><td id="composicao-impostos">R$ 0,00</td></tr>
-                    <tr><td>CS (7.5%):</td><td id="composicao-cs">R$ 0,00</td></tr>
-                    <tr><td>Parceiro (0%):</td><td id="composicao-parceiro">R$ 0,00</td></tr>
-                    <tr><td><strong>Base de Cálculo:</strong></td><td id="composicao-base">R$ 0,00</td></tr>
-                    <tr><td>Margem Alvo (55%):</td><td id="composicao-margem">R$ 0,00</td></tr>
-                </table>
-            </div>
-        </div>
-
-        <!-- ABA 4 - OUTPUT (resultados e alertas) -->
-        <div id="output" class="tab-content">
-            <h2>📊 Resultado da Proposta</h2>
-            
-            <div class="price-grid">
-                <div class="price-box piso">
-                    <h4>PREÇO PISO</h4>
-                    <div class="price" id="preco-piso">R$ 0,00</div>
-                    <small>Não vender abaixo</small>
-                </div>
-                <div class="price-box alvo">
-                    <h4>PREÇO ALVO</h4>
-                    <div class="price" id="preco-alvo">R$ 0,00</div>
-                    <small>Recomendado</small>
-                </div>
-                <div class="price-box premium">
-                    <h4>PREÇO PREMIUM</h4>
-                    <div class="price" id="preco-premium">R$ 0,00</div>
-                    <small>Valor/urgência/risco</small>
-                </div>
-            </div>
-
-            <div class="grid-2">
+                <h2>💰 Modelo de Cobrança</h2>
                 <div class="card">
-                    <h3>Detalhamento</h3>
+                    <div class="radio-group" id="modeloCobranca">
+                        <label class="radio-option selected">
+                            <input type="radio" name="cobranca" value="hora" checked> Hora
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="cobranca" value="fechado"> Preço fechado
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="cobranca" value="retainer"> Retainer (mensal)
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="cobranca" value="exito"> Êxito apenas
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="cobranca" value="hibrido"> Híbrido (Retainer + Êxito / Fechado + Êxito)
+                        </label>
+                    </div>
+                </div>
+
+                <h2>👥 Equipe e Esforço</h2>
+                <div class="card">
+                    <div id="perfis-container"></div>
+                    <button class="btn btn-secondary" onclick="adicionarPerfil()" style="width: 100%;">+ Adicionar Perfil</button>
+                    
+                    <div class="form-group mt-4">
+                        <label>% de risco de escopo (buffer automático)</label>
+                        <input type="number" id="riscoEscopo" value="20" min="0" max="100" step="1">
+                        <div class="info-text">Buffer sugerido: Baixa +10% | Média +20% | Alta +30%</div>
+                    </div>
+                </div>
+
+                <h2>📊 Condições Comerciais</h2>
+                <div class="grid-3">
+                    <div class="card">
+                        <h3>Financeiro</h3>
+                        <div class="form-group">
+                            <label>Entrada (%)</label>
+                            <input type="number" id="entrada" value="50" min="0" max="100" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Parcelamento (nº parcelas)</label>
+                            <input type="number" id="parcelas" value="1" min="1" max="24" step="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Desconto pretendido (%)</label>
+                            <input type="number" id="desconto" value="0" min="0" max="30" step="0.5">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Parcerias</h3>
+                        <div class="form-group">
+                            <label>Se há parceiro</label>
+                            <select id="parceiro">
+                                <option value="nao">Não</option>
+                                <option value="sim">Sim</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>% parceiro (se aplicável)</label>
+                            <input type="number" id="percParceiro" value="0" min="0" max="50" step="0.5">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>CS (Compensation System)</h3>
+                        <div class="form-group">
+                            <label>Se aplica CS</label>
+                            <select id="aplicaCS">
+                                <option value="sim">Sim</option>
+                                <option value="nao">Não</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>% CS (padrão)</label>
+                            <input type="number" id="percCS" value="7.5" min="0" max="20" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="calcular()">🚀 CALCULAR PREÇO</button>
+                </div>
+            </div>
+
+            <!-- ABA 2 - TABELAS (parâmetros) -->
+            <div id="tabelas" class="tab-content">
+                <h2>⚙️ Parâmetros da Planilha</h2>
+                
+                <h3>1) Custo-hora por perfil (fully loaded)</h3>
+                <div class="table-responsive">
                     <table>
-                        <tr><td>Custo total estimado:</td><td id="output-custo">R$ 0,00</td></tr>
-                        <tr><td>Impostos estimados:</td><td id="output-impostos">R$ 0,00</td></tr>
-                        <tr><td>CS estimado:</td><td id="output-cs">R$ 0,00</td></tr>
-                        <tr><td>Margem (R$):</td><td id="output-margem-valor">R$ 0,00</td></tr>
-                        <tr><td>Margem (%):</td><td id="output-margem-pct">0%</td></tr>
+                        <thead>
+                            <tr>
+                                <th>Perfil</th>
+                                <th>Salário</th>
+                                <th>Encargos (72%)</th>
+                                <th>Benefícios</th>
+                                <th>Total Mensal</th>
+                                <th>Horas Prod.</th>
+                                <th>Overhead/h</th>
+                                <th>Custo/hora</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Estagiário</td>
+                                <td><input type="number" id="salarioEstag" value="1800" step="100" style="width: 85px;"></td>
+                                <td id="encargosEstag">1296</td>
+                                <td><input type="number" id="beneficiosEstag" value="400" step="50" style="width: 70px;"></td>
+                                <td id="totalMensalEstag">3496</td>
+                                <td><input type="number" id="horasEstag" value="140" step="5" style="width: 70px;"></td>
+                                <td id="overheadHoraEstag">0</td>
+                                <td id="custoHoraEstag">24.97</td>
+                            </tr>
+                            <tr>
+                                <td>Júnior</td>
+                                <td><input type="number" id="salarioJr" value="3500" step="100" style="width: 85px;"></td>
+                                <td id="encargosJr">2520</td>
+                                <td><input type="number" id="beneficiosJr" value="600" step="50" style="width: 70px;"></td>
+                                <td id="totalMensalJr">6620</td>
+                                <td><input type="number" id="horasJr" value="140" step="5" style="width: 70px;"></td>
+                                <td id="overheadHoraJr">0</td>
+                                <td id="custoHoraJr">47.29</td>
+                            </tr>
+                            <tr>
+                                <td>Pleno</td>
+                                <td><input type="number" id="salarioPl" value="6500" step="100" style="width: 85px;"></td>
+                                <td id="encargosPl">4680</td>
+                                <td><input type="number" id="beneficiosPl" value="800" step="50" style="width: 70px;"></td>
+                                <td id="totalMensalPl">11980</td>
+                                <td><input type="number" id="horasPl" value="140" step="5" style="width: 70px;"></td>
+                                <td id="overheadHoraPl">0</td>
+                                <td id="custoHoraPl">85.57</td>
+                            </tr>
+                            <tr>
+                                <td>Sênior</td>
+                                <td><input type="number" id="salarioSr" value="10000" step="100" style="width: 85px;"></td>
+                                <td id="encargosSr">7200</td>
+                                <td><input type="number" id="beneficiosSr" value="1000" step="50" style="width: 70px;"></td>
+                                <td id="totalMensalSr">18200</td>
+                                <td><input type="number" id="horasSr" value="140" step="5" style="width: 70px;"></td>
+                                <td id="overheadHoraSr">0</td>
+                                <td id="custoHoraSr">130.00</td>
+                            </tr>
+                            <tr>
+                                <td>Coordenador</td>
+                                <td><input type="number" id="salarioCoord" value="14000" step="100" style="width: 85px;"></td>
+                                <td id="encargosCoord">10080</td>
+                                <td><input type="number" id="beneficiosCoord" value="1200" step="50" style="width: 70px;"></td>
+                                <td id="totalMensalCoord">25280</td>
+                                <td><input type="number" id="horasCoord" value="140" step="5" style="width: 70px;"></td>
+                                <td id="overheadHoraCoord">0</td>
+                                <td id="custoHoraCoord">180.57</td>
+                            </tr>
+                            <tr>
+                                <td>Sócio</td>
+                                <td><input type="number" id="salarioSocio" value="20000" step="100" style="width: 85px;"></td>
+                                <td id="encargosSocio">14400</td>
+                                <td><input type="number" id="beneficiosSocio" value="1500" step="50" style="width: 70px;"></td>
+                                <td id="totalMensalSocio">35900</td>
+                                <td><input type="number" id="horasSocio" value="140" step="5" style="width: 70px;"></td>
+                                <td id="overheadHoraSocio">0</td>
+                                <td id="custoHoraSocio">256.43</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
 
-                <div class="card">
-                    <h3>Parcelamento / Regras</h3>
-                    <table>
-                        <tr><td>Entrada (50%):</td><td id="output-entrada">R$ 0,00</td></tr>
-                        <tr><td>Parcelas:</td><td id="output-parcelas">1x R$ 0,00</td></tr>
-                        <tr><td>Total c/ juros (1% a.m.):</td><td id="output-total-juros">R$ 0,00</td></tr>
-                    </table>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>⚠️ Alertas Automáticos</h3>
-                <div id="alertas-container"></div>
-            </div>
-
-            <div class="button-group">
-                <button class="btn btn-success" onclick="salvarHistorico(event)">💾 Salvar no Histórico</button>
-            </div>
-        </div>
-
-        <!-- ABA 5 - HISTÓRICO ATUALIZADO (SEM EXPORTAR JSON E TESTAR GOOGLE SHEETS) -->
-        <div id="historico" class="tab-content">
-            <h2>📚 Histórico de Simulações</h2>
-            
-            <div class="card">
                 <div class="grid-2">
-                    <div class="form-group">
-                        <label>Filtrar por cliente</label>
-                        <input type="text" id="filtroCliente" placeholder="Digite o nome...">
+                    <div class="card">
+                        <h3>2) Margens-alvo por tipo de cobrança</h3>
+                        <table>
+                            <tr><td>Hora</td><td><input type="number" id="margemHora" value="55" min="30" max="80" step="1">%</td></tr>
+                            <tr><td>Preço fechado</td><td><input type="number" id="margemFechado" value="47" min="30" max="80" step="1">%</td></tr>
+                            <tr><td>Retainer (mensal)</td><td><input type="number" id="margemRetainer" value="52" min="30" max="80" step="1">%</td></tr>
+                            <tr><td>Êxito apenas</td><td><input type="number" id="margemExito" value="65" min="40" max="90" step="1">%</td></tr>
+                            <tr><td>Híbrido</td><td><input type="number" id="margemHibrido" value="50" min="30" max="80" step="1">%</td></tr>
+                        </table>
                     </div>
-                    <div class="form-group">
-                        <label>Ordenar por</label>
-                        <select id="ordenarPor">
-                            <option value="data">Data</option>
-                            <option value="cliente">Cliente</option>
-                            <option value="preco">Preço</option>
-                            <option value="margem">Margem</option>
-                        </select>
+
+                    <div class="card">
+                        <h3>3) Impostos / taxas</h3>
+                        <div class="form-group">
+                            <label>Regime tributário</label>
+                            <select id="regimeTributario">
+                                <option value="lucro_presumido">Lucro Presumido</option>
+                                <option value="lucro_real">Lucro Real</option>
+                                <option value="simples">Simples Nacional</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>% médio de impostos sobre receita</label>
+                            <input type="number" id="impostos" value="11.33" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Taxa de parcelamento (% ao mês)</label>
+                            <input type="number" id="taxaParcelamento" value="1" step="0.1">
+                        </div>
                     </div>
                 </div>
-                
-                <div id="historico-lista"></div>
-                
-                <div class="button-group" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 20px;">
-                    <button class="btn btn-success" onclick="exportarExcel()" title="Exportar para Excel">
-                        📊 Exportar Excel
-                    </button>
-                    <button class="btn btn-danger" onclick="exportarPDF()" title="Exportar para PDF">
-                        📑 Exportar PDF
-                    </button>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>4) CS (Compensation System)</h3>
+                        <div class="form-group">
+                            <label>Percentual padrão CS</label>
+                            <input type="number" id="csPadrao" value="7.5" step="0.1">%
+                        </div>
+                        <div class="form-group">
+                            <label>Base do CS</label>
+                            <select id="baseCS">
+                                <option value="liquido">Somente sobre recebimento líquido</option>
+                                <option value="bruto">Sobre valor bruto</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>5) Buffers automáticos</h3>
+                        <div class="grid-2">
+                            <div>
+                                <label>Complexidade Baixa</label>
+                                <input type="number" id="bufferBaixa" value="10" step="1">%
+                            </div>
+                            <div>
+                                <label>Complexidade Média</label>
+                                <input type="number" id="bufferMedia" value="20" step="1">%
+                            </div>
+                            <div>
+                                <label>Complexidade Alta</label>
+                                <input type="number" id="bufferAlta" value="30" step="1">%
+                            </div>
+                            <div>
+                                <label>Urgência Normal</label>
+                                <input type="number" id="bufferNormal" value="0" step="1">%
+                            </div>
+                            <div>
+                                <label>Urgência Urgente</label>
+                                <input type="number" id="bufferUrgencia" value="20" step="1">%
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <div style="margin-top: 10px; text-align: center;">
-                    <small style="color: #64748b;">Total de simulações: <span id="total-simulacoes">0</span></small>
+
+                <div class="card">
+                    <h3>Overhead</h3>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Overhead mensal total (R$)</label>
+                            <input type="number" id="overheadTotal" value="45000" step="1000">
+                        </div>
+                        <div class="form-group">
+                            <label>Total horas produtivas/mês</label>
+                            <input type="number" id="horasTotais" value="840" step="10">
+                        </div>
+                    </div>
+                    <div class="info-text">Overhead por hora: R$ <span id="overheadPorHora">53.57</span></div>
                 </div>
+            </div>
+
+            <!-- ABA 3 - CÁLCULO (memória transparente) -->
+            <div id="calculo" class="tab-content">
+                <h2>🔬 Memória de Cálculo</h2>
+                
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Perfil</th>
+                                <th>Horas</th>
+                                <th>Custo/h</th>
+                                <th>Subtotal</th>
+                                <th>Buffer</th>
+                                <th>Total c/ buffer</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpo-calculo"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5"><strong>Total Mão de Obra</strong></td>
+                                <td id="total-mao-obra">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5"><strong>Overhead</strong></td>
+                                <td id="total-overhead">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5"><strong>Subtotal</strong></td>
+                                <td id="subtotal-geral">R$ 0,00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="card mt-4">
+                    <h3>Composição do Preço</h3>
+                    <table>
+                        <tr><td>Custo total (MO + Overhead):</td><td id="composicao-custo">R$ 0,00</td></tr>
+                        <tr><td>Impostos (11.33%):</td><td id="composicao-impostos">R$ 0,00</td></tr>
+                        <tr><td>CS (7.5%):</td><td id="composicao-cs">R$ 0,00</td></tr>
+                        <tr><td>Parceiro (0%):</td><td id="composicao-parceiro">R$ 0,00</td></tr>
+                        <tr><td><strong>Base de Cálculo:</strong></td><td id="composicao-base">R$ 0,00</td></tr>
+                        <tr><td>Margem Alvo (55%):</td><td id="composicao-margem">R$ 0,00</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ABA 4 - OUTPUT (resultados e alertas) -->
+            <div id="output" class="tab-content">
+                <h2>📊 Resultado da Proposta</h2>
+                
+                <div class="price-grid">
+                    <div class="price-box piso">
+                        <h4>PREÇO PISO</h4>
+                        <div class="price" id="preco-piso">R$ 0,00</div>
+                        <small>Não vender abaixo</small>
+                    </div>
+                    <div class="price-box alvo">
+                        <h4>PREÇO ALVO</h4>
+                        <div class="price" id="preco-alvo">R$ 0,00</div>
+                        <small>Recomendado</small>
+                    </div>
+                    <div class="price-box premium">
+                        <h4>PREÇO PREMIUM</h4>
+                        <div class="price" id="preco-premium">R$ 0,00</div>
+                        <small>Valor/urgência/risco</small>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Detalhamento</h3>
+                        <table>
+                            <tr><td>Custo total estimado:</td><td id="output-custo">R$ 0,00</td></tr>
+                            <tr><td>Impostos estimados:</td><td id="output-impostos">R$ 0,00</td></tr>
+                            <tr><td>CS estimado:</td><td id="output-cs">R$ 0,00</td></tr>
+                            <tr><td>Margem (R$):</td><td id="output-margem-valor">R$ 0,00</td></tr>
+                            <tr><td>Margem (%):</td><td id="output-margem-pct">0%</td></tr>
+                        </table>
+                    </div>
+
+                    <div class="card">
+                        <h3>Parcelamento / Regras</h3>
+                        <table>
+                            <tr><td>Entrada (50%):</td><td id="output-entrada">R$ 0,00</td></tr>
+                            <tr><td>Parcelas:</td><td id="output-parcelas">1x R$ 0,00</td></tr>
+                            <tr><td>Total c/ juros (1% a.m.):</td><td id="output-total-juros">R$ 0,00</td></tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚠️ Alertas Automáticos</h3>
+                    <div id="alertas-container"></div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-success" onclick="salvarHistorico(event)">💾 Salvar no Histórico</button>
+                </div>
+            </div>
+
+            <!-- ABA 5 - HISTÓRICO -->
+            <div id="historico" class="tab-content">
+                <h2>📚 Histórico de Simulações</h2>
+                
+                <div class="card">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Filtrar por cliente</label>
+                            <input type="text" id="filtroCliente" placeholder="Digite o nome...">
+                        </div>
+                        <div class="form-group">
+                            <label>Ordenar por</label>
+                            <select id="ordenarPor">
+                                <option value="data">Data</option>
+                                <option value="cliente">Cliente</option>
+                                <option value="preco">Preço</option>
+                                <option value="margem">Margem</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="historico-lista"></div>
+                    
+                    <div class="button-group" style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 20px;">
+                        <button class="btn btn-success" onclick="exportarExcel()" title="Exportar para Excel">
+                            📊 Exportar Excel
+                        </button>
+                        <button class="btn btn-danger" onclick="exportarPDF()" title="Exportar para PDF">
+                            📑 Exportar PDF
+                        </button>
+                    </div>
+                    
+                    <div style="margin-top: 10px; text-align: center;">
+                        <small style="color: #64748b;">Total de simulações: <span id="total-simulacoes">0</span></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de Edição -->
+        <div id="modalEdicao" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Opções da Simulação</h3>
+                    <button class="modal-close" onclick="fecharModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="modal-conteudo"></div>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Edição -->
-    <div id="modalEdicao" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Opções da Simulação</h3>
-                <button class="modal-close" onclick="fecharModal()">&times;</button>
-            </div>
-            <div class="modal-body" id="modal-conteudo"></div>
-        </div>
-    </div>
-
-<script>
-// ========== SISTEMA DE PRECIFICAÇÃO MFBD ==========
-// Versão 5.0 - Com exclusão/edição em TODAS as abas via Google Sheets
-// Atualizado: Exportação Excel/PDF e limpeza automática
-
-let historico = JSON.parse(localStorage.getItem('historicoSmartPrice') || '[]');
-let indiceEditando = -1;
-
-// ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
-// SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw2K_O-V3YclzgfoQ9mOgx-N_m69x6uAuYMXyYOc0kbuLjRXsbH6ovfrA2VG3bEXV-5/exec';
-
-// ========== FUNÇÕES DE NOTIFICAÇÃO ==========
-function mostrarToast(mensagem, tipo = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${tipo}`;
-    toast.innerHTML = `
-        <span style="font-size: 20px;">${tipo === 'success' ? '✅' : tipo === 'error' ? '❌' : '⚠️'}</span>
-        <span>${mensagem}</span>
-    `;
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideIn 0.3s reverse';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-// ========== FUNÇÕES DE UTILIDADE ==========
-function showTab(tabName) {
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
-    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
-    document.getElementById(tabName).classList.add('active');
-    
-    if (tabName === 'historico') {
-        atualizarHistorico();
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function fecharModal() {
-    document.getElementById('modalEdicao').classList.remove('active');
-}
-
-// ========== GERENCIAMENTO DE PERFIS ==========
-function adicionarPerfil() {
-    const container = document.getElementById('perfis-container');
-    const div = document.createElement('div');
-    div.className = 'perfil-row';
-    div.innerHTML = `
-        <select class="perfil">
-            <option value="estag">Estagiário</option>
-            <option value="jr">Júnior</option>
-            <option value="pl">Pleno</option>
-            <option value="sr">Sênior</option>
-            <option value="coord">Coordenador</option>
-            <option value="socio">Sócio</option>
-        </select>
-        <input type="number" class="horas" value="40" min="0" step="1" placeholder="Horas">
-        <span class="custo-previsto">R$ 0,00</span>
-        <button class="remove-btn" onclick="removerPerfil(this)">✕</button>
-    `;
-    container.appendChild(div);
-    atualizarCustoPrevisto(div);
-    
-    div.querySelector('.horas').addEventListener('input', () => atualizarCustoPrevisto(div));
-    div.querySelector('.perfil').addEventListener('change', () => atualizarCustoPrevisto(div));
-}
-
-function removerPerfil(botao) {
-    if (document.querySelectorAll('.perfil-row').length > 1) {
-        botao.parentElement.remove();
-    } else {
-        mostrarToast('Mantenha pelo menos um perfil na equipe', 'warning');
-    }
-}
-
-// ========== CÁLCULO DE CUSTOS ==========
-function getCustoHora(perfil) {
-    const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
-    const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
-    const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
-    
-    const encargos = salario * 0.72;
-    const custoTotalMensal = salario + encargos + beneficios;
-    
-    const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-    const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
-    const overheadHora = overheadTotal / horasTotais;
-    
-    return (custoTotalMensal / horas) + overheadHora;
-}
-
-function atualizarCustoPrevisto(div) {
-    const select = div.querySelector('.perfil');
-    const horas = parseFloat(div.querySelector('.horas').value) || 0;
-    const perfil = select.value;
-    
-    const perfilId = perfil.charAt(0).toUpperCase() + perfil.slice(1);
-    const custoHora = getCustoHora(perfilId);
-    const custoTotal = custoHora * horas;
-    
-    div.querySelector('.custo-previsto').textContent = `R$ ${custoTotal.toFixed(2)}`;
-}
-
-function calcularBuffer() {
-    const complexidade = document.getElementById('complexidade').value;
-    const urgencia = document.getElementById('urgencia').value;
-    
-    const bufferComplexidade = {
-        baixa: parseFloat(document.getElementById('bufferBaixa')?.value) || 10,
-        media: parseFloat(document.getElementById('bufferMedia')?.value) || 20,
-        alta: parseFloat(document.getElementById('bufferAlta')?.value) || 30
-    };
-    
-    const bufferUrgencia = {
-        normal: parseFloat(document.getElementById('bufferNormal')?.value) || 0,
-        urgente: parseFloat(document.getElementById('bufferUrgencia')?.value) || 20
-    };
-    
-    return (bufferComplexidade[complexidade] + bufferUrgencia[urgencia]) / 100;
-}
-
-// ========== COLETA E PREENCHIMENTO DE DADOS ==========
-function coletarDadosInput() {
-    const perfis = document.querySelectorAll('.perfil-row');
-    const perfisData = [];
-    
-    perfis.forEach(perfil => {
-        const select = perfil.querySelector('.perfil');
-        const horas = parseFloat(perfil.querySelector('.horas').value) || 0;
-        
-        if (horas > 0) {
-            perfisData.push({
-                perfil: select.value,
-                perfilNome: select.options[select.selectedIndex].text,
-                horas: horas,
-                custoHora: getCustoHora(select.value.charAt(0).toUpperCase() + select.value.slice(1))
-            });
-        }
-    });
-
-    return {
-        cliente: document.getElementById('cliente').value,
-        segmento: document.getElementById('segmento').value,
-        tipo: document.getElementById('tipo').value,
-        risco: document.getElementById('risco').value,
-        produto: document.getElementById('produto').value,
-        produtoTexto: document.getElementById('produto').options[document.getElementById('produto').selectedIndex].text,
-        escopo: document.getElementById('escopo').value,
-        complexidade: document.getElementById('complexidade').value,
-        urgencia: document.getElementById('urgencia').value,
-        cobranca: document.querySelector('input[name="cobranca"]:checked')?.value || 'hora',
-        cobrancaTexto: document.querySelector('input[name="cobranca"]:checked')?.nextSibling?.nodeValue?.trim() || 'Hora',
-        perfis: perfisData,
-        riscoEscopo: parseFloat(document.getElementById('riscoEscopo').value) || 20,
-        entrada: parseFloat(document.getElementById('entrada').value) || 50,
-        parcelas: parseInt(document.getElementById('parcelas').value) || 1,
-        desconto: parseFloat(document.getElementById('desconto').value) || 0,
-        parceiro: document.getElementById('parceiro').value,
-        percParceiro: parseFloat(document.getElementById('percParceiro').value) || 0,
-        aplicaCS: document.getElementById('aplicaCS').value,
-        percCS: parseFloat(document.getElementById('percCS').value) || 7.5
-    };
-}
-
-function preencherInputComDados(dados) {
-    document.getElementById('cliente').value = dados.cliente || '';
-    document.getElementById('segmento').value = dados.segmento || 'tecnologia';
-    document.getElementById('tipo').value = dados.tipo || 'novo';
-    document.getElementById('risco').value = dados.risco || 'baixo';
-    document.getElementById('produto').value = dados.produto || 'consultoria';
-    document.getElementById('escopo').value = dados.escopo || '';
-    document.getElementById('complexidade').value = dados.complexidade || 'media';
-    document.getElementById('urgencia').value = dados.urgencia || 'normal';
-    
-    const radios = document.getElementsByName('cobranca');
-    radios.forEach(radio => {
-        if (radio.value === dados.cobranca) {
-            radio.checked = true;
-            radio.closest('.radio-option').classList.add('selected');
-        } else {
-            radio.closest('.radio-option').classList.remove('selected');
-        }
-    });
-    
-    document.getElementById('riscoEscopo').value = dados.riscoEscopo || 20;
-    document.getElementById('entrada').value = dados.entrada || 50;
-    document.getElementById('parcelas').value = dados.parcelas || 1;
-    document.getElementById('desconto').value = dados.desconto || 0;
-    document.getElementById('parceiro').value = dados.parceiro || 'nao';
-    document.getElementById('percParceiro').value = dados.percParceiro || 0;
-    document.getElementById('aplicaCS').value = dados.aplicaCS || 'sim';
-    document.getElementById('percCS').value = dados.percCS || 7.5;
-    
-    const container = document.getElementById('perfis-container');
-    container.innerHTML = '';
-    
-    if (dados.perfis && dados.perfis.length > 0) {
-        dados.perfis.forEach(p => {
-            const div = document.createElement('div');
-            div.className = 'perfil-row';
-            div.innerHTML = `
-                <select class="perfil">
-                    <option value="estag" ${p.perfil === 'estag' ? 'selected' : ''}>Estagiário</option>
-                    <option value="jr" ${p.perfil === 'jr' ? 'selected' : ''}>Júnior</option>
-                    <option value="pl" ${p.perfil === 'pl' ? 'selected' : ''}>Pleno</option>
-                    <option value="sr" ${p.perfil === 'sr' ? 'selected' : ''}>Sênior</option>
-                    <option value="coord" ${p.perfil === 'coord' ? 'selected' : ''}>Coordenador</option>
-                    <option value="socio" ${p.perfil === 'socio' ? 'selected' : ''}>Sócio</option>
-                </select>
-                <input type="number" class="horas" value="${p.horas}" min="0" step="1" placeholder="Horas">
-                <span class="custo-previsto">R$ 0,00</span>
-                <button class="remove-btn" onclick="removerPerfil(this)">✕</button>
-            `;
-            container.appendChild(div);
-            
-            div.querySelector('.horas').addEventListener('input', () => atualizarCustoPrevisto(div));
-            div.querySelector('.perfil').addEventListener('change', () => atualizarCustoPrevisto(div));
-            atualizarCustoPrevisto(div);
-        });
-    } else {
-        adicionarPerfil();
-    }
-}
-
-// ========== FUNÇÃO PRINCIPAL DE CÁLCULO ==========
-function calcular() {
-    try {
-        const perfis = document.querySelectorAll('.perfil-row');
-        let custoTotal = 0;
-        let detalhamento = [];
-        
-        perfis.forEach(perfil => {
-            const select = perfil.querySelector('.perfil');
-            const horas = parseFloat(perfil.querySelector('.horas').value) || 0;
-            
-            if (horas > 0) {
-                const perfilNome = select.options[select.selectedIndex].text;
-                const perfilValue = select.value;
-                const perfilId = perfilValue.charAt(0).toUpperCase() + perfilValue.slice(1);
-                const custoHora = getCustoHora(perfilId);
-                const custo = custoHora * horas;
-                
-                custoTotal += custo;
-                detalhamento.push({ perfil: perfilNome, horas, custoHora, custo });
-            }
-        });
-
-        const buffer = calcularBuffer();
-        const custoComBuffer = custoTotal * (1 + buffer);
-        const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-
-        const percImpostos = parseFloat(document.getElementById('impostos')?.value) || 11.33;
-        const impostos = custoComBuffer * (percImpostos / 100);
-
-        const aplicaCS = document.getElementById('aplicaCS')?.value === 'sim';
-        const percCS = aplicaCS ? (parseFloat(document.getElementById('percCS')?.value) || 7.5) : 0;
-        const cs = custoComBuffer * (percCS / 100);
-
-        const temParceiro = document.getElementById('parceiro')?.value === 'sim';
-        const percParceiro = temParceiro ? (parseFloat(document.getElementById('percParceiro')?.value) || 0) : 0;
-        const parceiro = custoComBuffer * (percParceiro / 100);
-
-        const tipoCobranca = document.querySelector('input[name="cobranca"]:checked')?.value || 'hora';
-        const margens = {
-            hora: parseFloat(document.getElementById('margemHora')?.value) || 55,
-            fechado: parseFloat(document.getElementById('margemFechado')?.value) || 47,
-            retainer: parseFloat(document.getElementById('margemRetainer')?.value) || 52,
-            exito: parseFloat(document.getElementById('margemExito')?.value) || 65,
-            hibrido: parseFloat(document.getElementById('margemHibrido')?.value) || 50
-        };
-        
-        const margemAlvo = margens[tipoCobranca] / 100;
-        const custoBase = custoComBuffer + impostos + cs + parceiro;
-
-        const precoPiso = custoBase * (1 + (margemAlvo - 0.15));
-        const precoAlvo = custoBase * (1 + margemAlvo);
-        const precoPremium = custoBase * (1 + margemAlvo + 0.15);
-        const desconto = parseFloat(document.getElementById('desconto').value) || 0;
-        const precoComDesconto = precoAlvo * (1 - desconto/100);
-
-        // Atualizar UI
-        document.getElementById('preco-piso').innerHTML = `R$ ${precoPiso.toFixed(2)}`;
-        document.getElementById('preco-alvo').innerHTML = `R$ ${precoAlvo.toFixed(2)}`;
-        document.getElementById('preco-premium').innerHTML = `R$ ${precoPremium.toFixed(2)}`;
-        
-        document.getElementById('output-custo').innerHTML = `R$ ${custoBase.toFixed(2)}`;
-        document.getElementById('output-impostos').innerHTML = `R$ ${impostos.toFixed(2)}`;
-        document.getElementById('output-cs').innerHTML = `R$ ${cs.toFixed(2)}`;
-        document.getElementById('output-margem-valor').innerHTML = `R$ ${(precoAlvo - custoBase).toFixed(2)}`;
-        document.getElementById('output-margem-pct').innerHTML = `${((precoAlvo - custoBase) / precoAlvo * 100).toFixed(1)}%`;
-
-        const entradaPct = parseFloat(document.getElementById('entrada').value) || 50;
-        const parcelas = parseInt(document.getElementById('parcelas').value) || 1;
-        const taxaJuros = parseFloat(document.getElementById('taxaParcelamento').value) || 1;
-        
-        const valorEntrada = precoAlvo * (entradaPct/100);
-        const valorParcelas = (precoAlvo - valorEntrada) / parcelas;
-        const valorTotalJuros = precoAlvo * Math.pow(1 + taxaJuros/100, parcelas);
-        
-        document.getElementById('output-entrada').innerHTML = `R$ ${valorEntrada.toFixed(2)}`;
-        document.getElementById('output-parcelas').innerHTML = `${parcelas}x R$ ${valorParcelas.toFixed(2)}`;
-        document.getElementById('output-total-juros').innerHTML = `R$ ${valorTotalJuros.toFixed(2)}`;
-
-        // Alertas
-        const alertas = [];
-        
-        if (precoComDesconto < precoPiso) {
-            alertas.push({ tipo: 'critical', msg: '⚠️ Abaixo do piso' });
-        }
-        
-        if (desconto > 15) {
-            alertas.push({ tipo: 'warning', msg: '⚠️ Desconto acima da alçada (máx 15%)' });
-        }
-        
-        if (tipoCobranca === 'exito' && custoBase > precoAlvo * 0.4) {
-            alertas.push({ tipo: 'critical', msg: '⚠️ Modelo de êxito sem cobertura de custo' });
-        }
-        
-        if (tipoCobranca === 'retainer' && !document.getElementById('escopo').value) {
-            alertas.push({ tipo: 'warning', msg: '⚠️ Escopo sem limites (retainer)' });
-        }
-        
-        if (document.getElementById('risco').value === 'alto') {
-            alertas.push({ tipo: 'critical', msg: '⚠️ Risco alto de inadimplência' });
-        }
-        
-        if (tipoCobranca === 'exito' && entradaPct < 30) {
-            alertas.push({ tipo: 'warning', msg: '⚠️ Êxito: Recomendado entrada mínima de 30%' });
-        }
-
-        const alertasContainer = document.getElementById('alertas-container');
-        alertasContainer.innerHTML = '';
-        
-        if (alertas.length === 0) {
-            alertasContainer.innerHTML = '<div class="alert alert-success">✅ Nenhum alerta identificado</div>';
-        } else {
-            alertas.forEach(a => {
-                alertasContainer.innerHTML += `<div class="alert alert-${a.tipo === 'critical' ? 'critical' : 'warning'}">${a.msg}</div>`;
-            });
-        }
-
-        // Tabela de cálculo
-        const corpoCalculo = document.getElementById('corpo-calculo');
-        corpoCalculo.innerHTML = '';
-        
-        detalhamento.forEach(item => {
-            corpoCalculo.innerHTML += `
-                <tr>
-                    <td>${item.perfil}</td>
-                    <td>${item.horas}h</td>
-                    <td>R$ ${item.custoHora.toFixed(2)}</td>
-                    <td>R$ ${item.custo.toFixed(2)}</td>
-                    <td>R$ ${(item.custo * buffer).toFixed(2)}</td>
-                    <td>R$ ${(item.custo * (1 + buffer)).toFixed(2)}</td>
-                </tr>
-            `;
-        });
-
-        document.getElementById('total-mao-obra').innerHTML = `R$ ${custoTotal.toFixed(2)}`;
-        document.getElementById('total-overhead').innerHTML = `R$ ${overheadTotal.toFixed(2)}`;
-        document.getElementById('subtotal-geral').innerHTML = `R$ ${(custoTotal + overheadTotal).toFixed(2)}`;
-
-        document.getElementById('composicao-custo').innerHTML = `R$ ${custoComBuffer.toFixed(2)}`;
-        document.getElementById('composicao-impostos').innerHTML = `R$ ${impostos.toFixed(2)}`;
-        document.getElementById('composicao-cs').innerHTML = `R$ ${cs.toFixed(2)}`;
-        document.getElementById('composicao-parceiro').innerHTML = `R$ ${parceiro.toFixed(2)}`;
-        document.getElementById('composicao-base').innerHTML = `R$ ${custoBase.toFixed(2)}`;
-        document.getElementById('composicao-margem').innerHTML = `R$ ${(precoAlvo - custoBase).toFixed(2)}`;
-
-        // ===== PREPARAR DADOS COMPLETOS PARA SALVAR =====
-        window.ultimoResultado = {
-            ...coletarDadosInput(),
-            margemHora: parseFloat(document.getElementById('margemHora')?.value) || 55,
-            margemFechado: parseFloat(document.getElementById('margemFechado')?.value) || 47,
-            margemRetainer: parseFloat(document.getElementById('margemRetainer')?.value) || 52,
-            margemExito: parseFloat(document.getElementById('margemExito')?.value) || 65,
-            margemHibrido: parseFloat(document.getElementById('margemHibrido')?.value) || 50,
-            impostos: parseFloat(document.getElementById('impostos')?.value) || 11.33,
-            taxaParcelamento: parseFloat(document.getElementById('taxaParcelamento')?.value) || 1,
-            regimeTributario: document.getElementById('regimeTributario')?.value || 'lucro_presumido',
-            csPadrao: parseFloat(document.getElementById('csPadrao')?.value) || 7.5,
-            baseCS: document.getElementById('baseCS')?.value || 'liquido',
-            bufferBaixa: parseFloat(document.getElementById('bufferBaixa')?.value) || 10,
-            bufferMedia: parseFloat(document.getElementById('bufferMedia')?.value) || 20,
-            bufferAlta: parseFloat(document.getElementById('bufferAlta')?.value) || 30,
-            bufferNormal: parseFloat(document.getElementById('bufferNormal')?.value) || 0,
-            bufferUrgencia: parseFloat(document.getElementById('bufferUrgencia')?.value) || 20,
-            overheadTotal: overheadTotal,
-            horasTotais: parseFloat(document.getElementById('horasTotais')?.value) || 840,
-            buffer: buffer,
-            custoTotalMO: custoTotal,
-            detalhamentoCalculo: detalhamento,
-            preco: precoAlvo,
-            precoPiso: precoPiso,
-            precoPremium: precoPremium,
-            margem: ((precoAlvo - custoBase) / precoAlvo * 100).toFixed(1),
-            margemValor: precoAlvo - custoBase,
-            custoBase: custoBase,
-            custoComBuffer: custoComBuffer,
-            impostosCalculados: impostos,
-            csCalculado: cs,
-            parceiroValor: parceiro,
-            valorEntrada: valorEntrada,
-            valorParcelas: valorParcelas,
-            valorTotalJuros: valorTotalJuros,
-            alertas: alertas.map(a => a.msg).join('; '),
-            id: indiceEditando !== -1 ? historico[indiceEditando].id : 'SP_' + new Date().getTime(),
-            data: new Date().toLocaleString('pt-BR'),
-            timestamp: new Date().toISOString(),
-            usuario: 'WebApp',
-            dispositivo: navigator.userAgent
-        };
-
-        showTab('output');
-        mostrarToast('✅ Cálculo realizado com sucesso!', 'success');
-
-    } catch (error) {
-        console.error('Erro:', error);
-        mostrarToast('❌ Erro ao calcular. Verifique todos os campos.', 'error');
-    }
-}
-
-// ========== FUNÇÕES PARA INTEGRAÇÃO COM GOOGLE SHEETS ==========
-
-async function excluirDaNuvem(id) {
-    try {
-        console.log('🗑️ Excluindo da nuvem ID:', id);
-        const response = await fetch(GOOGLE_SHEETS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'excluirSimulacao', id: id })
-        });
-        return true;
-    } catch(error) {
-        console.error('❌ Erro ao excluir da nuvem:', error);
-        return false;
-    }
-}
-
-async function buscarDaNuvem(id) {
-    try {
-        console.log('🔍 Buscando da nuvem ID:', id);
-        const response = await fetch(GOOGLE_SHEETS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'buscarSimulacao', id: id })
-        });
-        return true;
-    } catch(error) {
-        console.error('❌ Erro ao buscar da nuvem:', error);
-        return false;
-    }
-}
-
-async function enviarTodasAbasParaPlanilha(dadosCompletos) {
-    try {
-        console.log('📤 Enviando dados para planilha:', dadosCompletos.cliente);
-        const dadosEnvio = { action: 'salvarCompleto', dados: dadosCompletos };
-        const response = await fetch(GOOGLE_SHEETS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dadosEnvio)
-        });
-        console.log('✅ Requisição enviada');
-        return true;
-    } catch(error) {
-        console.error('❌ Erro ao enviar:', error);
-        return false;
-    }
-}
-
-async function testarConexaoGoogle() {
-    try {
-        console.log('🔄 Testando conexão...');
-        mostrarToast('Testando conexão...', 'warning');
-        const response = await fetch(GOOGLE_SHEETS_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'testarConexao' })
-        });
-        mostrarToast('✅ Conexão estabelecida!', 'success');
-        return true;
-    } catch(error) {
-        console.error('❌ Erro:', error);
-        mostrarToast('❌ Falha na conexão', 'error');
-        return false;
-    }
-}
-
-// ========== FUNÇÃO DE LIMPEZA DE CAMPOS ==========
-function limparCamposAposEnvio() {
-    const campoCliente = document.getElementById('cliente');
-    if (campoCliente) campoCliente.value = '';
-    
-    const campoEscopo = document.getElementById('escopo');
-    if (campoEscopo) campoEscopo.value = '';
-    
-    showTab('input');
-    console.log('🧹 Campos Cliente e Escopo limpos');
-}
-
-// ========== FUNÇÃO DE SALVAR NO HISTÓRICO ==========
-async function salvarHistorico(event) {
-    if (!window.ultimoResultado) {
-        mostrarToast('❌ Calcule um preço primeiro!', 'warning');
-        return;
-    }
-    
-    const btnSalvar = event?.target;
-    const textoOriginal = btnSalvar?.innerHTML;
-    if (btnSalvar) {
-        btnSalvar.innerHTML = '<span class="spinner"></span> Salvando...';
-        btnSalvar.disabled = true;
-    }
-    
-    try {
-        const isEditando = indiceEditando !== -1;
-        
-        if (isEditando) {
-            historico[indiceEditando] = window.ultimoResultado;
-            mostrarToast('✅ Simulação atualizada', 'success');
-        } else {
-            historico.unshift(window.ultimoResultado);
-            mostrarToast('✅ Nova simulação salva', 'success');
-        }
-        
-        localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
-        
-        const enviado = await enviarTodasAbasParaPlanilha(window.ultimoResultado);
-        
-        if (enviado) {
-            mostrarToast('✅ Dados salvos no Google Sheets!', 'success');
-            limparCamposAposEnvio();
-        } else {
-            mostrarToast('⚠️ Salvo localmente, falha na nuvem', 'warning');
-        }
-        
-        if (isEditando) indiceEditando = -1;
-        atualizarHistorico();
-        
-    } catch (error) {
-        console.error('❌ Erro:', error);
-        mostrarToast('❌ Erro ao salvar', 'error');
-    } finally {
-        if (btnSalvar) {
-            btnSalvar.innerHTML = textoOriginal;
-            btnSalvar.disabled = false;
-        }
-    }
-}
-
-// ========== FUNÇÕES DE EXPORTAÇÃO ==========
-
-function exportarExcel() {
-    try {
-        if (historico.length === 0) {
-            mostrarToast('📭 Nenhum dado para exportar', 'warning');
-            return;
-        }
-        
-        const cabecalhos = ['ID', 'Data', 'Cliente', 'Produto', 'Preço (R$)', 'Margem (%)', 'Risco', 'Complexidade', 'Cobrança'];
-        const dados = historico.map(item => [
-            item.id || '', item.data || '', item.cliente || '', 
-            item.produtoTexto || item.produto || '', item.preco || 0, 
-            item.margem || 0, item.risco || '', item.complexidade || '', 
-            item.cobrancaTexto || item.cobranca || ''
-        ]);
-        
-        const conteudoCSV = [cabecalhos, ...dados].map(linha => linha.join(',')).join('\n');
-        const blob = new Blob(["\uFEFF" + conteudoCSV], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `historico_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-        
-        mostrarToast('📊 Histórico exportado como CSV!', 'success');
-    } catch(error) {
-        console.error('Erro:', error);
-        mostrarToast('❌ Erro ao exportar', 'error');
-    }
-}
-
-function exportarPDF() {
-    try {
-        if (historico.length === 0) {
-            mostrarToast('📭 Nenhum dado para exportar', 'warning');
-            return;
-        }
-        
-        let conteudoHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="UTF-8"><title>MFBD - Histórico</title>
-            <style>
-                body { font-family: Arial; margin: 20px; }
-                h1 { color: #1e293b; text-align: center; }
-                table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-                th { background: #1e293b; color: white; padding: 10px; }
-                td { border: 1px solid #e2e8f0; padding: 8px; }
-                .data { color: #64748b; text-align: right; }
-            </style>
-            </head>
-            <body>
-                <h1>MFBD - Precificação Inteligente</h1>
-                <p class="data">Exportado em: ${new Date().toLocaleString('pt-BR')}</p>
-                <p>Total de simulações: ${historico.length}</p>
-                <table>
-                    <tr><th>Cliente</th><th>Produto</th><th>Preço</th><th>Margem</th><th>Risco</th><th>Data</th></tr>
-        `;
-        
-        historico.forEach(item => {
-            conteudoHTML += `<tr>
-                <td>${item.cliente || ''}</td>
-                <td>${item.produtoTexto || item.produto || ''}</td>
-                <td>R$ ${(item.preco || 0).toFixed(2)}</td>
-                <td>${item.margem || 0}%</td>
-                <td>${item.risco || ''}</td>
-                <td>${item.data || ''}</td>
-            </tr>`;
-        });
-        
-        conteudoHTML += '</table></body></html>';
-        
-        const blob = new Blob([conteudoHTML], { type: 'text/html;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `historico_${new Date().toISOString().split('T')[0]}.html`;
-        link.click();
-        
-        mostrarToast('📑 Histórico exportado como HTML!', 'success');
-        
-        if (confirm('Abrir para impressão?')) {
-            const janela = window.open('', '_blank');
-            janela.document.write(conteudoHTML);
-            janela.document.close();
-            janela.print();
-        }
-    } catch(error) {
-        console.error('Erro:', error);
-        mostrarToast('❌ Erro ao exportar', 'error');
-    }
-}
-
-// ========== FUNÇÕES DO HISTÓRICO ==========
-
-function editarItem(indiceReal) {
-    const item = historico[indiceReal];
-    if (item) {
-        indiceEditando = indiceReal;
-        preencherInputComDados(item);
-        showTab('input');
-        fecharModal();
-        mostrarToast(`✏️ Editando: ${item.cliente}`, 'warning');
-    }
-}
-
-async function excluirItem(indiceReal) {
-    const item = historico[indiceReal];
-    if (confirm(`🗑️ Excluir "${item.cliente}" de TODAS as abas?`)) {
-        mostrarToast('Excluindo...', 'warning');
-        const excluidoNuvem = await excluirDaNuvem(item.id);
-        
-        if (excluidoNuvem) mostrarToast('✅ Excluído da nuvem', 'success');
-        else mostrarToast('⚠️ Falha na nuvem', 'warning');
-        
-        historico.splice(indiceReal, 1);
-        localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
-        atualizarHistorico();
-        fecharModal();
-    }
-}
-
-function abrirModalEdicao(indiceReal) {
-    const item = historico[indiceReal];
-    if (!item) return;
-    
-    const modal = document.getElementById('modalEdicao');
-    const conteudo = document.getElementById('modal-conteudo');
-    
-    const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
-    const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
-    
-    conteudo.innerHTML = `
-        <p><strong>ID:</strong> ${item.id}</p>
-        <p><strong>Cliente:</strong> ${item.cliente}</p>
-        <p><strong>Produto:</strong> ${item.produtoTexto || item.produto}</p>
-        <p><strong>Preço:</strong> R$ ${item.preco.toFixed(2)}</p>
-        <p><strong>Margem:</strong> ${item.margem}%</p>
-        <p><strong>Risco:</strong> <span class="badge ${riscoClass}">${riscoLabel}</span></p>
-        <p><strong>Data:</strong> ${item.data}</p>
-        <div class="button-group">
-            <button class="btn btn-warning" onclick="editarItem(${indiceReal})">✏️ Editar</button>
-            <button class="btn btn-danger" onclick="excluirItem(${indiceReal})">🗑️ Excluir</button>
-            <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
-        </div>
-    `;
-    
-    modal.classList.add('active');
-}
-
-function atualizarHistorico() {
-    const lista = document.getElementById('historico-lista');
-    const filtro = document.getElementById('filtroCliente')?.value?.toLowerCase() || '';
-    const ordenar = document.getElementById('ordenarPor')?.value || 'data';
-    
-    let historicoFiltrado = historico.filter(item => 
-        item.cliente && item.cliente.toLowerCase().includes(filtro)
-    );
-    
-    if (ordenar === 'data') {
-        historicoFiltrado.sort((a, b) => new Date(b.data) - new Date(a.data));
-    } else if (ordenar === 'cliente') {
-        historicoFiltrado.sort((a, b) => (a.cliente || '').localeCompare(b.cliente || ''));
-    } else if (ordenar === 'preco') {
-        historicoFiltrado.sort((a, b) => (b.preco || 0) - (a.preco || 0));
-    } else if (ordenar === 'margem') {
-        historicoFiltrado.sort((a, b) => (b.margem || 0) - (a.margem || 0));
-    }
-    
-    lista.innerHTML = '';
-    document.getElementById('total-simulacoes').textContent = historicoFiltrado.length;
-    
-    if (historicoFiltrado.length === 0) {
-        lista.innerHTML = '<p class="text-center" style="padding: 40px;">📭 Nenhuma simulação encontrada</p>';
-        return;
-    }
-    
-    historicoFiltrado.forEach(item => {
-        const indiceReal = historico.findIndex(h => h.id === item.id);
-        if (indiceReal === -1) return;
-        
-        const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
-        const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
-        const isRecent = indiceReal === 0;
-        
-        lista.innerHTML += `
-            <div class="historico-item" onclick="abrirModalEdicao(${indiceReal})">
-                <div class="historico-header">
-                    <span class="historico-titulo">
-                        ${item.cliente}
-                        ${isRecent ? '<span style="background:#3b82f6; color:white; padding:2px 8px; border-radius:12px; font-size:10px;">🆕 Recente</span>' : ''}
-                        <span style="font-size:10px; color:#64748b;">${item.id}</span>
-                    </span>
-                    <div class="historico-acoes" onclick="event.stopPropagation()">
-                        <button style="background:#f59e0b; color:white;" onclick="editarItem(${indiceReal})">✏️</button>
-                        <button style="background:#ef4444; color:white;" onclick="excluirItem(${indiceReal})">🗑️</button>
-                    </div>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 10px;">
-                    <div><small>Produto</small><br><strong>${item.produtoTexto || item.produto}</strong></div>
-                    <div><small>Preço</small><br><strong>R$ ${item.preco.toFixed(2)}</strong></div>
-                    <div><small>Margem</small><br><strong>${item.margem}%</strong></div>
-                    <div><small>Risco</small><br><span class="badge ${riscoClass}">${riscoLabel}</span></div>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
-                    <span>${item.data}</span>
-                    ${isRecent ? '<span style="color:#3b82f6; float:right;">⬆️ Último</span>' : ''}
-                </div>
-            </div>
-        `;
-    });
-}
-
-function exportarHistorico() {
-    const dataStr = JSON.stringify(historico, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const link = document.createElement('a');
-    link.href = dataUri;
-    link.download = `historico_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    mostrarToast('📤 Histórico exportado!', 'success');
-}
-
-// ========== INICIALIZAÇÃO ==========
-window.onload = function() {
-    historico.sort((a, b) => new Date(b.data) - new Date(a.data));
-    adicionarPerfil();
-    
-    document.querySelectorAll('.radio-option').forEach(option => {
-        option.addEventListener('click', function() {
-            const radio = this.querySelector('input[type="radio"]');
-            radio.checked = true;
-            document.querySelectorAll('.radio-option').forEach(opt => opt.classList.remove('selected'));
-            this.classList.add('selected');
-        });
-    });
-    
-    function atualizarTodosCustos() {
-        const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
-        const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-        const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
-        const overheadHora = overheadTotal / horasTotais;
-        
-        document.getElementById('overheadPorHora').textContent = overheadHora.toFixed(2);
-        
-        perfis.forEach(perfil => {
-            const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
-            const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
-            const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
-            
-            const encargos = salario * 0.72;
-            const totalMensal = salario + encargos + beneficios;
-            const custoHora = (totalMensal / horas) + overheadHora;
-            
-            const encargosEl = document.getElementById(`encargos${perfil}`);
-            const totalMensalEl = document.getElementById(`totalMensal${perfil}`);
-            const overheadHoraEl = document.getElementById(`overheadHora${perfil}`);
-            const custoHoraEl = document.getElementById(`custoHora${perfil}`);
-            
-            if (encargosEl) encargosEl.textContent = Math.round(encargos);
-            if (totalMensalEl) totalMensalEl.textContent = Math.round(totalMensal);
-            if (overheadHoraEl) overheadHoraEl.textContent = `R$ ${overheadHora.toFixed(2)}`;
-            if (custoHoraEl) custoHoraEl.textContent = custoHora.toFixed(2);
-        });
-    }
-    
-    const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
-    perfis.forEach(perfil => {
-        const salario = document.getElementById(`salario${perfil}`);
-        const beneficios = document.getElementById(`beneficios${perfil}`);
-        const horas = document.getElementById(`horas${perfil}`);
-        if (salario) salario.addEventListener('input', atualizarTodosCustos);
-        if (beneficios) beneficios.addEventListener('input', atualizarTodosCustos);
-        if (horas) horas.addEventListener('input', atualizarTodosCustos);
-    });
-    
-    document.getElementById('overheadTotal')?.addEventListener('input', atualizarTodosCustos);
-    document.getElementById('horasTotais')?.addEventListener('input', atualizarTodosCustos);
-    
-    atualizarTodosCustos();
-    
-    document.getElementById('filtroCliente')?.addEventListener('input', atualizarHistorico);
-    document.getElementById('ordenarPor')?.addEventListener('change', atualizarHistorico);
-    
-    window.addEventListener('click', (event) => {
-        if (event.target === document.getElementById('modalEdicao')) fecharModal();
-    });
-    
-    atualizarHistorico();
-    indiceEditando = -1;
-    
-    console.log('✅ MFBD - Sistema carregado v5.0');
-    mostrarToast('🚀 MFBD v5.0 - Pronto!', 'success');
-};
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
