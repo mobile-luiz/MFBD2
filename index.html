@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>MFBD - Precificação Inteligente</title>
     <link rel="stylesheet" href="style.css">
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
 </head>
 <body>
     <!-- TELA DE LOGIN -->
@@ -64,6 +68,7 @@
                 <button class="tab" onclick="showTab('calculo')">🔬 CÁLCULO</button>
                 <button class="tab" onclick="showTab('output')">📊 OUTPUT</button>
                 <button class="tab" onclick="showTab('historico')">📚 HISTÓRICO</button>
+                <button class="tab" onclick="showTab('dashboard')">📈 DASHBOARD</button>
             </div>
 
             <!-- ABA 1 - INPUT -->
@@ -555,6 +560,141 @@
                 </div>
             </div>
         </div>
+
+
+<!-- ABA 6 - DASHBOARD COM GRÁFICOS -->
+<div id="dashboard" class="tab-content">
+    <h2>📈 Dashboard de Gestão</h2>
+    
+    <!-- KPIs Principais -->
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-label">Total Simulações</div>
+            <div class="kpi-value" id="kpi-total-simulacoes">0</div>
+            <div class="kpi-sub">últimos 30 dias</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Ticket Médio</div>
+            <div class="kpi-value" id="kpi-ticket-medio">R$ 0</div>
+            <div class="kpi-sub">por simulação</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Margem Média</div>
+            <div class="kpi-value" id="kpi-margem-media">0%</div>
+            <div class="kpi-sub">% sobre preço</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">Risco Alto</div>
+            <div class="kpi-value" id="kpi-risco-alto">0</div>
+            <div class="kpi-sub">simulações críticas</div>
+        </div>
+    </div>
+
+    <!-- Controles do Dashboard -->
+    <div class="chart-controls">
+        <button class="chart-btn active" onclick="mudarPeriodoGraficos('7d')">7 dias</button>
+        <button class="chart-btn" onclick="mudarPeriodoGraficos('30d')">30 dias</button>
+        <button class="chart-btn" onclick="mudarPeriodoGraficos('90d')">90 dias</button>
+        <button class="chart-btn" onclick="mudarPeriodoGraficos('all')">Todo período</button>
+    </div>
+
+    <!-- Grid de Gráficos -->
+    <div class="dashboard-grid">
+        <!-- Gráfico 1: Evolução de Preços -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>📊 Evolução de Preços</h3>
+                <span class="chart-periodo" id="periodo-preco">Últimos 30 dias</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="graficoPrecos"></canvas>
+            </div>
+            <div class="chart-stats">
+                <div class="stat-item">
+                    <div class="stat-label">Maior preço</div>
+                    <div class="stat-value" id="stat-maior-preco">R$ 0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Menor preço</div>
+                    <div class="stat-value" id="stat-menor-preco">R$ 0</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Média</div>
+                    <div class="stat-value" id="stat-media-preco">R$ 0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico 2: Distribuição por Segmento -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>🥧 Distribuição por Segmento</h3>
+                <span class="chart-periodo">Total geral</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="graficoSegmentos"></canvas>
+            </div>
+            <div class="legenda-container" id="legenda-segmentos"></div>
+        </div>
+
+        <!-- Gráfico 3: Margens por Tipo de Cobrança -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>📊 Margens por Tipo de Cobrança</h3>
+                <span class="chart-periodo">Média por categoria</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="graficoMargens"></canvas>
+            </div>
+            <div class="chart-stats">
+                <div class="stat-item">
+                    <div class="stat-label">Maior margem</div>
+                    <div class="stat-value" id="stat-maior-margem">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Margem média</div>
+                    <div class="stat-value" id="stat-media-margem">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico 4: Distribuição de Risco -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>⚠️ Análise de Risco</h3>
+                <span class="chart-periodo">Distribuição percentual</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="graficoRisco"></canvas>
+            </div>
+            <div class="legenda-container" id="legenda-risco"></div>
+        </div>
+
+        <!-- Gráfico 5: Top Clientes -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>🏆 Top 5 Clientes por Valor</h3>
+                <span class="chart-periodo">Maiores propostas</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="graficoTopClientes"></canvas>
+            </div>
+        </div>
+
+        <!-- Gráfico 6: Tendência de Margens -->
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>📈 Tendência de Margens</h3>
+                <span class="chart-periodo" id="periodo-margem">Últimos 30 dias</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="graficoTendenciaMargens"></canvas>
+            </div>
+            <div class="trend-indicator" id="trend-margem"></div>
+        </div>
+    </div>
+</div>
+
 
         <!-- Modal de Edição -->
         <div id="modalEdicao" class="modal">

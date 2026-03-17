@@ -6,6 +6,22 @@
 let usuarioAtual = null;
 let tentativasLogin = 0;
 
+// ========== VARIÁVEIS GLOBAIS ==========
+let historico = JSON.parse(localStorage.getItem('historicoSmartPrice') || '[]');
+let indiceEditando = -1;
+
+// ========== VARIÁVEIS DE PAGINAÇÃO ==========
+let paginaAtual = 1;
+let itensPorPagina = 10; // Padrão 10 itens
+let historicoPaginado = [];
+
+// ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxus8SPc3G_X4IeQiwgPyE9eeUc6ivkAcyxvq88lHVdFPVNgkrn2Jk74xfZLoXpDUAW/exec';
+
+// ========== GRÁFICOS ==========
+let graficoPrecos, graficoSegmentos, graficoMargens, graficoRisco, graficoTopClientes, graficoTendenciaMargens;
+let periodoAtualGraficos = '30d';
+
 // ========== FUNÇÕES DE FORMATAÇÃO BRASILEIRA ==========
 function formatarMoeda(valor) {
     if (valor === undefined || valor === null || isNaN(valor)) return 'R$ 0,00';
@@ -40,51 +56,23 @@ function formatarPercentual(valor) {
     }) + '%';
 }
 
-// ===== FUNÇÃO PARA COLETAR TODOS OS SALÁRIOS ATUALIZADOS =====
-function coletarSalariosAtualizados() {
-    const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
-    const salarios = {};
+function mostrarToast(mensagem, tipo = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${tipo}`;
+    toast.innerHTML = `
+        <span style="font-size: 20px;">${tipo === 'success' ? '✅' : tipo === 'error' ? '❌' : '⚠️'}</span>
+        <span>${mensagem}</span>
+    `;
+    document.body.appendChild(toast);
     
-    perfis.forEach(perfil => {
-        const salarioInput = document.getElementById(`salario${perfil}`);
-        const beneficiosInput = document.getElementById(`beneficios${perfil}`);
-        const horasInput = document.getElementById(`horas${perfil}`);
-        
-        if (salarioInput) {
-            salarios[`salario${perfil}`] = parseFloat(salarioInput.value) || 0;
-        }
-        if (beneficiosInput) {
-            salarios[`beneficios${perfil}`] = parseFloat(beneficiosInput.value) || 0;
-        }
-        if (horasInput) {
-            salarios[`horas${perfil}`] = parseFloat(horasInput.value) || 140;
-        }
-    });
-    
-    salarios.overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-    salarios.horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
-    
-    console.log('💰 Salários coletados:', salarios);
-    return salarios;
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
-// ===== FUNÇÃO PARA CALCULAR CUSTO/HORA COM SALÁRIOS ATUALIZADOS =====
-function getCustoHoraComSalarios(perfil, salarios) {
-    const salario = salarios[`salario${perfil}`] || 0;
-    const beneficios = salarios[`beneficios${perfil}`] || 0;
-    const horas = salarios[`horas${perfil}`] || 140;
-    
-    const encargos = salario * 0.72;
-    const custoTotalMensal = salario + encargos + beneficios;
-    
-    const overheadTotal = salarios.overheadTotal || 45000;
-    const horasTotais = salarios.horasTotais || 840;
-    const overheadHora = overheadTotal / horasTotais;
-    
-    return (custoTotalMensal / horas) + overheadHora;
-}
+// ========== FUNÇÕES DE LOGIN ==========
 
-// Verificar se usuário já está logado
 function verificarSessao() {
     console.log('🔍 Verificando sessão...');
     const sessao = localStorage.getItem('mfbd_sessao');
@@ -105,7 +93,6 @@ function verificarSessao() {
     }
 }
 
-// Mostrar tela de login
 function mostrarTelaLogin() {
     const telaLogin = document.getElementById('tela-login');
     const sistemaPrincipal = document.getElementById('sistema-principal');
@@ -114,7 +101,6 @@ function mostrarTelaLogin() {
     if (sistemaPrincipal) sistemaPrincipal.style.display = 'none';
 }
 
-// Mostrar sistema principal
 function mostrarSistema() {
     const telaLogin = document.getElementById('tela-login');
     const sistemaPrincipal = document.getElementById('sistema-principal');
@@ -129,7 +115,6 @@ function mostrarSistema() {
     }, 100);
 }
 
-// Atualizar header com nome do usuário
 function atualizarHeaderUsuario() {
     if (!usuarioAtual) return;
     
@@ -172,7 +157,6 @@ function atualizarHeaderUsuario() {
     `;
 }
 
-// Função de login
 async function fazerLogin(event) {
     event.preventDefault();
     
@@ -344,56 +328,96 @@ function fazerLogout() {
     mostrarToast('👋 Logout realizado', 'success');
 }
 
-document.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        const telaLogin = document.getElementById('tela-login');
-        if (telaLogin && telaLogin.style.display === 'flex') {
-            fazerLogin(e);
+// ========== FUNÇÕES DE SALÁRIOS E CUSTOS ==========
+
+function coletarSalariosAtualizados() {
+    const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
+    const salarios = {};
+    
+    perfis.forEach(perfil => {
+        const salarioInput = document.getElementById(`salario${perfil}`);
+        const beneficiosInput = document.getElementById(`beneficios${perfil}`);
+        const horasInput = document.getElementById(`horas${perfil}`);
+        
+        if (salarioInput) {
+            salarios[`salario${perfil}`] = parseFloat(salarioInput.value) || 0;
         }
-    }
-});
-
-// ========== SISTEMA DE PRECIFICAÇÃO MFBD ==========
-// Versão 6.0 - Com salvamento completo de salários
-// ==================================================
-
-let historico = JSON.parse(localStorage.getItem('historicoSmartPrice') || '[]');
-let indiceEditando = -1;
-
-// ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxQMX9HP_f7eByOwt3qiRUo66kp5tXXF6zJmFBY53bpG7NY6QxjaQSLvzGME8gS8ppL/exec';
-
-function mostrarToast(mensagem, tipo = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${tipo}`;
-    toast.innerHTML = `
-        <span style="font-size: 20px;">${tipo === 'success' ? '✅' : tipo === 'error' ? '❌' : '⚠️'}</span>
-        <span>${mensagem}</span>
-    `;
-    document.body.appendChild(toast);
+        if (beneficiosInput) {
+            salarios[`beneficios${perfil}`] = parseFloat(beneficiosInput.value) || 0;
+        }
+        if (horasInput) {
+            salarios[`horas${perfil}`] = parseFloat(horasInput.value) || 140;
+        }
+    });
     
-    setTimeout(() => {
-        toast.style.animation = 'slideIn 0.3s reverse';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    salarios.overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+    salarios.horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
+    
+    console.log('💰 Salários coletados:', salarios);
+    return salarios;
 }
 
-function showTab(tabName) {
-    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+function getCustoHoraComSalarios(perfil, salarios) {
+    const salario = salarios[`salario${perfil}`] || 0;
+    const beneficios = salarios[`beneficios${perfil}`] || 0;
+    const horas = salarios[`horas${perfil}`] || 140;
     
-    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
-    document.getElementById(tabName).classList.add('active');
+    const encargos = salario * 0.72;
+    const custoTotalMensal = salario + encargos + beneficios;
     
-    if (tabName === 'historico') {
-        atualizarHistorico();
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const overheadTotal = salarios.overheadTotal || 45000;
+    const horasTotais = salarios.horasTotais || 840;
+    const overheadHora = overheadTotal / horasTotais;
+    
+    return (custoTotalMensal / horas) + overheadHora;
 }
 
-function fecharModal() {
-    document.getElementById('modalEdicao').classList.remove('active');
+function getCustoHora(perfil) {
+    const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
+    const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
+    const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
+    
+    const encargos = salario * 0.72;
+    const custoTotalMensal = salario + encargos + beneficios;
+    
+    const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+    const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
+    const overheadHora = overheadTotal / horasTotais;
+    
+    return (custoTotalMensal / horas) + overheadHora;
 }
+
+function atualizarTodosCustos() {
+    const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
+    const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
+    const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
+    const overheadHora = overheadTotal / horasTotais;
+    
+    const overheadPorHora = document.getElementById('overheadPorHora');
+    if (overheadPorHora) overheadPorHora.textContent = formatarMoeda(overheadHora).replace('R$', 'R$');
+    
+    perfis.forEach(perfil => {
+        const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
+        const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
+        const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
+        
+        const encargos = salario * 0.72;
+        const totalMensal = salario + encargos + beneficios;
+        const custoHora = (totalMensal / horas) + overheadHora;
+        
+        const encargosEl = document.getElementById(`encargos${perfil}`);
+        const totalMensalEl = document.getElementById(`totalMensal${perfil}`);
+        const overheadHoraEl = document.getElementById(`overheadHora${perfil}`);
+        const custoHoraEl = document.getElementById(`custoHora${perfil}`);
+        
+        if (encargosEl) encargosEl.textContent = Math.round(encargos).toLocaleString('pt-BR');
+        if (totalMensalEl) totalMensalEl.textContent = Math.round(totalMensal).toLocaleString('pt-BR');
+        if (overheadHoraEl) overheadHoraEl.textContent = formatarMoeda(overheadHora).replace('R$', 'R$');
+        if (custoHoraEl) custoHoraEl.textContent = formatarMoeda(custoHora).replace('R$', '');
+    });
+}
+
+// ========== FUNÇÕES DE PERFIL ==========
 
 function adicionarPerfil() {
     const container = document.getElementById('perfis-container');
@@ -427,21 +451,6 @@ function removerPerfil(botao) {
     }
 }
 
-function getCustoHora(perfil) {
-    const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
-    const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
-    const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
-    
-    const encargos = salario * 0.72;
-    const custoTotalMensal = salario + encargos + beneficios;
-    
-    const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-    const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
-    const overheadHora = overheadTotal / horasTotais;
-    
-    return (custoTotalMensal / horas) + overheadHora;
-}
-
 function atualizarCustoPrevisto(div) {
     const select = div.querySelector('.perfil');
     const horas = parseFloat(div.querySelector('.horas').value) || 0;
@@ -453,6 +462,8 @@ function atualizarCustoPrevisto(div) {
     
     div.querySelector('.custo-previsto').textContent = formatarMoeda(custoTotal);
 }
+
+// ========== FUNÇÕES DE CÁLCULO ==========
 
 function calcularBuffer() {
     const complexidade = document.getElementById('complexidade').value;
@@ -574,7 +585,6 @@ function preencherInputComDados(dados) {
     }
 }
 
-// ========== FUNÇÃO PRINCIPAL DE CÁLCULO CORRIGIDA ==========
 function calcular() {
     try {
         const salariosAtuais = coletarSalariosAtualizados();
@@ -772,7 +782,7 @@ function calcular() {
     }
 }
 
-// ========== FUNÇÕES PARA INTEGRAÇÃO COM GOOGLE SHEETS ==========
+// ========== FUNÇÕES DE GOOGLE SHEETS ==========
 
 async function excluirDaNuvem(id) {
     try {
@@ -905,6 +915,7 @@ async function salvarHistorico(event) {
         
         if (isEditando) indiceEditando = -1;
         atualizarHistorico();
+        atualizarDashboardSeAtivo();
         
     } catch (error) {
         console.error('❌ Erro:', error);
@@ -917,108 +928,37 @@ async function salvarHistorico(event) {
     }
 }
 
-function exportarExcel() {
-    try {
-        if (historico.length === 0) {
-            mostrarToast('📭 Nenhum dado para exportar', 'warning');
-            return;
-        }
-        
-        const cabecalhos = ['ID', 'Data', 'Cliente', 'Produto', 'Preço (R$)', 'Margem (%)', 'Risco', 'Complexidade', 'Cobrança'];
-        const dados = historico.map(item => {
-            const preco = parseFloat(item.preco) || 0;
-            const margem = parseFloat(item.margem) || 0;
-            
-            return [
-                item.id || '', 
-                item.data || '', 
-                item.cliente || '', 
-                item.produtoTexto || item.produto || '', 
-                preco.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}).replace('.', ','), 
-                margem.toFixed(1).replace('.', ','), 
-                item.risco || '', 
-                item.complexidade || '', 
-                item.cobrancaTexto || item.cobranca || ''
-            ];
-        });
-        
-        const conteudoCSV = [cabecalhos, ...dados].map(linha => linha.join(';')).join('\n');
-        const blob = new Blob(["\uFEFF" + conteudoCSV], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `historico_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-        
-        mostrarToast('📊 Histórico exportado como CSV!', 'success');
-    } catch(error) {
-        console.error('Erro:', error);
-        mostrarToast('❌ Erro ao exportar', 'error');
-    }
-}
+// ========== FUNÇÕES DO HISTÓRICO ==========
 
-function exportarPDF() {
-    try {
-        if (historico.length === 0) {
-            mostrarToast('📭 Nenhum dado para exportar', 'warning');
-            return;
-        }
-        
-        let conteudoHTML = `
-            <!DOCTYPE html>
-            <html>
-            <head><meta charset="UTF-8"><title>MFBD - Histórico</title>
-            <style>
-                body { font-family: Arial; margin: 20px; }
-                h1 { color: #1e293b; text-align: center; }
-                table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-                th { background: #1e293b; color: white; padding: 10px; }
-                td { border: 1px solid #e2e8f0; padding: 8px; }
-                .data { color: #64748b; text-align: right; }
-                .moeda { text-align: right; }
-            </style>
-            </head>
-            <body>
-                <h1>MFBD - Precificação Inteligente</h1>
-                <p class="data">Exportado em: ${new Date().toLocaleString('pt-BR')}</p>
-                <p>Total de simulações: ${historico.length}</p>
-                <table>
-                    <tr><th>Cliente</th><th>Produto</th><th>Preço</th><th>Margem</th><th>Risco</th><th>Data</th></tr>
-        `;
-        
-        historico.forEach(item => {
-            const preco = parseFloat(item.preco) || 0;
-            const margem = parseFloat(item.margem) || 0;
-            
-            conteudoHTML += `<tr>
-                <td>${item.cliente || ''}</td>
-                <td>${item.produtoTexto || item.produto || ''}</td>
-                <td class="moeda">${formatarMoeda(preco)}</td>
-                <td class="moeda">${margem.toFixed(1).replace('.', ',')}%</td>
-                <td>${item.risco || ''}</td>
-                <td>${item.data || ''}</td>
-            </tr>`;
-        });
-        
-        conteudoHTML += '</table></body></html>';
-        
-        const blob = new Blob([conteudoHTML], { type: 'text/html;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `historico_${new Date().toISOString().split('T')[0]}.html`;
-        link.click();
-        
-        mostrarToast('📑 Histórico exportado como HTML!', 'success');
-        
-        if (confirm('Abrir para impressão?')) {
-            const janela = window.open('', '_blank');
-            janela.document.write(conteudoHTML);
-            janela.document.close();
-            janela.print();
-        }
-    } catch(error) {
-        console.error('Erro:', error);
-        mostrarToast('❌ Erro ao exportar', 'error');
-    }
+function abrirModalEdicao(indiceReal) {
+    const item = historico[indiceReal];
+    if (!item) return;
+    
+    const modal = document.getElementById('modalEdicao');
+    const conteudo = document.getElementById('modal-conteudo');
+    
+    const preco = parseFloat(item.preco) || 0;
+    const margem = parseFloat(item.margem) || 0;
+    
+    const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
+    const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
+    
+    conteudo.innerHTML = `
+        <p><strong>ID:</strong> ${item.id}</p>
+        <p><strong>Cliente:</strong> ${item.cliente}</p>
+        <p><strong>Produto:</strong> ${item.produtoTexto || item.produto}</p>
+        <p><strong>Preço:</strong> ${formatarMoeda(preco)}</p>
+        <p><strong>Margem:</strong> ${margem.toFixed(1).replace('.', ',')}%</p>
+        <p><strong>Risco:</strong> <span class="badge ${riscoClass}">${riscoLabel}</span></p>
+        <p><strong>Data:</strong> ${item.data}</p>
+        <div class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+            <button class="btn btn-warning" onclick="editarItem(${indiceReal})" style="flex:1;">✏️ Editar</button>
+            <button class="btn btn-danger" onclick="excluirItem(${indiceReal})" style="flex:1;">🗑️ Excluir</button>
+            <button class="btn btn-secondary" onclick="fecharModal()" style="flex:1;">Fechar</button>
+        </div>
+    `;
+    
+    modal.classList.add('active');
 }
 
 function editarItem(indiceReal) {
@@ -1057,145 +997,259 @@ async function excluirItem(indiceReal) {
         historico.splice(indiceReal, 1);
         localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
         atualizarHistorico();
+        atualizarDashboardSeAtivo();
         fecharModal();
     }
 }
 
-function abrirModalEdicao(indiceReal) {
-    const item = historico[indiceReal];
-    if (!item) return;
-    
-    const modal = document.getElementById('modalEdicao');
-    const conteudo = document.getElementById('modal-conteudo');
-    
-    const preco = parseFloat(item.preco) || 0;
-    const margem = parseFloat(item.margem) || 0;
-    
-    const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
-    const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
-    
-    conteudo.innerHTML = `
-        <p><strong>ID:</strong> ${item.id}</p>
-        <p><strong>Cliente:</strong> ${item.cliente}</p>
-        <p><strong>Produto:</strong> ${item.produtoTexto || item.produto}</p>
-        <p><strong>Preço:</strong> ${formatarMoeda(preco)}</p>
-        <p><strong>Margem:</strong> ${margem.toFixed(1).replace('.', ',')}%</p>
-        <p><strong>Risco:</strong> <span class="badge ${riscoClass}">${riscoLabel}</span></p>
-        <p><strong>Data:</strong> ${item.data}</p>
-        <div class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
-            <button class="btn btn-warning" onclick="editarItem(${indiceReal})" style="flex:1;">✏️ Editar</button>
-            <button class="btn btn-danger" onclick="excluirItem(${indiceReal})" style="flex:1;">🗑️ Excluir</button>
-            <button class="btn btn-secondary" onclick="fecharModal()" style="flex:1;">Fechar</button>
-        </div>
-    `;
-    
-    modal.classList.add('active');
-}
-
-function atualizarHistorico() {
-    const lista = document.getElementById('historico-lista');
-    const filtro = document.getElementById('filtroCliente')?.value?.toLowerCase() || '';
-    const ordenar = document.getElementById('ordenarPor')?.value || 'data';
-    
-    let historicoFiltrado = historico.filter(item => 
-        item.cliente && item.cliente.toLowerCase().includes(filtro)
-    );
-    
-    if (ordenar === 'data') {
-        historicoFiltrado.sort((a, b) => new Date(b.data) - new Date(a.data));
-    } else if (ordenar === 'cliente') {
-        historicoFiltrado.sort((a, b) => (a.cliente || '').localeCompare(b.cliente || ''));
-    } else if (ordenar === 'preco') {
-        historicoFiltrado.sort((a, b) => (parseFloat(b.preco) || 0) - (parseFloat(a.preco) || 0));
-    } else if (ordenar === 'margem') {
-        historicoFiltrado.sort((a, b) => (parseFloat(b.margem) || 0) - (parseFloat(a.margem) || 0));
-    }
-    
-    lista.innerHTML = '';
-    document.getElementById('total-simulacoes').textContent = historicoFiltrado.length;
-    
-    if (historicoFiltrado.length === 0) {
-        lista.innerHTML = '<p class="text-center" style="padding: 40px;">📭 Nenhuma simulação encontrada</p>';
-        return;
-    }
-    
-    historicoFiltrado.forEach(item => {
-        const indiceReal = historico.findIndex(h => h.id === item.id);
-        if (indiceReal === -1) return;
+function exportarExcel() {
+    try {
+        if (historico.length === 0) {
+            mostrarToast('📭 Nenhum dado para exportar', 'warning');
+            return;
+        }
         
-        const preco = parseFloat(item.preco) || 0;
-        const margem = parseFloat(item.margem) || 0;
-        
-        const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
-        const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
-        const isRecent = indiceReal === 0;
-        
-        lista.innerHTML += `
-            <div class="historico-item" onclick="abrirModalEdicao(${indiceReal})">
-                <div class="historico-header">
-                    <span class="historico-titulo">
-                        ${item.cliente}
-                        ${isRecent ? '<span style="background:#3b82f6; color:white; padding:2px 8px; border-radius:12px; font-size:10px;">🆕 Recente</span>' : ''}
-                        <span style="font-size:10px; color:#64748b;">${item.id}</span>
-                    </span>
-                    <div class="historico-acoes" onclick="event.stopPropagation()">
-                        <button style="background:#f59e0b; color:white;" onclick="editarItem(${indiceReal})">✏️</button>
-                        <button style="background:#ef4444; color:white;" onclick="excluirItem(${indiceReal})">🗑️</button>
+        // Criar modal de escolha
+        const modalChoice = document.createElement('div');
+        modalChoice.className = 'modal';
+        modalChoice.id = 'modalExportChoice';
+        modalChoice.style.display = 'flex';
+        modalChoice.innerHTML = `
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3>📊 Exportar Excel</h3>
+                    <button class="modal-close" onclick="document.getElementById('modalExportChoice').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 20px; color: #475569;">O que deseja exportar?</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <button class="btn btn-primary" onclick="exportarExcelOpcao('pagina')" style="width: 100%;">
+                            📄 Apenas página atual (${historicoPaginado.length} registros)
+                        </button>
+                        <button class="btn btn-success" onclick="exportarExcelOpcao('todos')" style="width: 100%;">
+                            📚 Todos os registros (${historico.length} registros)
+                        </button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('modalExportChoice').remove()" style="width: 100%;">
+                            ❌ Cancelar
+                        </button>
                     </div>
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 10px;">
-                    <div><small>Produto</small><br><strong>${item.produtoTexto || item.produto}</strong></div>
-                    <div><small>Preço</small><br><strong>${formatarMoeda(preco)}</strong></div>
-                    <div><small>Margem</small><br><strong>${margem.toFixed(1).replace('.', ',')}%</strong></div>
-                    <div><small>Risco</small><br><span class="badge ${riscoClass}">${riscoLabel}</span></div>
-                </div>
-                <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
-                    <span>${item.data}</span>
-                    ${isRecent ? '<span style="color:#3b82f6; float:right;">⬆️ Último</span>' : ''}
                 </div>
             </div>
         `;
-    });
+        document.body.appendChild(modalChoice);
+        
+    } catch(error) {
+        console.error('Erro:', error);
+        mostrarToast('❌ Erro ao exportar: ' + error.message, 'error');
+    }
 }
 
-function exportarHistorico() {
-    const dataStr = JSON.stringify(historico, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const link = document.createElement('a');
-    link.href = dataUri;
-    link.download = `historico_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    mostrarToast('📤 Histórico exportado!', 'success');
+function exportarExcelOpcao(tipo) {
+    // Fechar modal
+    document.getElementById('modalExportChoice')?.remove();
+    
+    try {
+        let dadosParaExportar;
+        let nomeArquivo;
+        
+        if (tipo === 'pagina') {
+            dadosParaExportar = historicoPaginado;
+            nomeArquivo = `historico_pagina_${paginaAtual}_${new Date().toISOString().split('T')[0]}.csv`;
+            mostrarToast(`📊 Exportando página ${paginaAtual}...`, 'warning');
+        } else {
+            dadosParaExportar = historico;
+            nomeArquivo = `historico_completo_${new Date().toISOString().split('T')[0]}.csv`;
+            mostrarToast(`📊 Exportando todos os ${dadosParaExportar.length} registros...`, 'warning');
+        }
+        
+        const cabecalhos = ['ID', 'Data', 'Cliente', 'Produto', 'Preço (R$)', 'Margem (%)', 'Risco', 'Complexidade', 'Cobrança'];
+        const dados = dadosParaExportar.map(item => {
+            const preco = parseFloat(item.preco) || 0;
+            const margem = parseFloat(item.margem) || 0;
+            
+            return [
+                item.id || '', 
+                item.data || '', 
+                item.cliente || '', 
+                item.produtoTexto || item.produto || '', 
+                preco.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}).replace('.', ','), 
+                margem.toFixed(1).replace('.', ','), 
+                item.risco || '', 
+                item.complexidade || '', 
+                item.cobrancaTexto || item.cobranca || ''
+            ];
+        });
+        
+        // Adicionar coluna de página se for apenas a página atual
+        if (tipo === 'pagina') {
+            cabecalhos.unshift('Página');
+            dados.forEach(linha => linha.unshift(paginaAtual));
+        }
+        
+        const conteudoCSV = [cabecalhos, ...dados].map(linha => linha.join(';')).join('\n');
+        const blob = new Blob(["\uFEFF" + conteudoCSV], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = nomeArquivo;
+        link.click();
+        
+        mostrarToast(`📊 ${tipo === 'pagina' ? 'Página' : 'Histórico completo'} exportado com sucesso!`, 'success');
+        
+    } catch(error) {
+        console.error('Erro:', error);
+        mostrarToast('❌ Erro ao exportar: ' + error.message, 'error');
+    }
 }
 
-function atualizarTodosCustos() {
-    const perfis = ['Estag', 'Jr', 'Pl', 'Sr', 'Coord', 'Socio'];
-    const overheadTotal = parseFloat(document.getElementById('overheadTotal')?.value) || 45000;
-    const horasTotais = parseFloat(document.getElementById('horasTotais')?.value) || 840;
-    const overheadHora = overheadTotal / horasTotais;
+function exportarPDF() {
+    try {
+        if (historico.length === 0) {
+            mostrarToast('📭 Nenhum dado para exportar', 'warning');
+            return;
+        }
+        
+        // Criar modal de escolha
+        const modalChoice = document.createElement('div');
+        modalChoice.className = 'modal';
+        modalChoice.id = 'modalExportPDFChoice';
+        modalChoice.style.display = 'flex';
+        modalChoice.innerHTML = `
+            <div class="modal-content" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h3>📑 Exportar PDF</h3>
+                    <button class="modal-close" onclick="document.getElementById('modalExportPDFChoice').remove()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 20px; color: #475569;">O que deseja exportar?</p>
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <button class="btn btn-primary" onclick="exportarPDFOpcao('pagina')" style="width: 100%;">
+                            📄 Apenas página atual (${historicoPaginado.length} registros)
+                        </button>
+                        <button class="btn btn-success" onclick="exportarPDFOpcao('todos')" style="width: 100%;">
+                            📚 Todos os registros (${historico.length} registros)
+                        </button>
+                        <button class="btn btn-secondary" onclick="document.getElementById('modalExportPDFChoice').remove()" style="width: 100%;">
+                            ❌ Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalChoice);
+        
+    } catch(error) {
+        console.error('Erro:', error);
+        mostrarToast('❌ Erro ao exportar: ' + error.message, 'error');
+    }
+}
+
+function exportarPDFOpcao(tipo) {
+    // Fechar modal
+    document.getElementById('modalExportPDFChoice')?.remove();
     
-    const overheadPorHora = document.getElementById('overheadPorHora');
-    if (overheadPorHora) overheadPorHora.textContent = formatarMoeda(overheadHora).replace('R$', 'R$');
-    
-    perfis.forEach(perfil => {
-        const salario = parseFloat(document.getElementById(`salario${perfil}`)?.value) || 0;
-        const beneficios = parseFloat(document.getElementById(`beneficios${perfil}`)?.value) || 0;
-        const horas = parseFloat(document.getElementById(`horas${perfil}`)?.value) || 140;
+    try {
+        let dadosParaExportar;
+        let tituloArquivo;
+        let subtitulo;
         
-        const encargos = salario * 0.72;
-        const totalMensal = salario + encargos + beneficios;
-        const custoHora = (totalMensal / horas) + overheadHora;
+        if (tipo === 'pagina') {
+            dadosParaExportar = historicoPaginado;
+            tituloArquivo = `historico_pagina_${paginaAtual}_${new Date().toISOString().split('T')[0]}.html`;
+            subtitulo = `Página ${paginaAtual} de ${Math.ceil(historico.length / itensPorPagina)} - ${dadosParaExportar.length} registros`;
+        } else {
+            dadosParaExportar = historico;
+            tituloArquivo = `historico_completo_${new Date().toISOString().split('T')[0]}.html`;
+            subtitulo = `Histórico Completo - ${dadosParaExportar.length} registros`;
+        }
         
-        const encargosEl = document.getElementById(`encargos${perfil}`);
-        const totalMensalEl = document.getElementById(`totalMensal${perfil}`);
-        const overheadHoraEl = document.getElementById(`overheadHora${perfil}`);
-        const custoHoraEl = document.getElementById(`custoHora${perfil}`);
+        let conteudoHTML = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>MFBD - Histórico</title>
+                <style>
+                    body { font-family: Arial; margin: 20px; }
+                    h1 { color: #1e293b; text-align: center; }
+                    h2 { color: #334155; text-align: center; font-size: 16px; font-weight: normal; margin-bottom: 20px; }
+                    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+                    th { background: #1e293b; color: white; padding: 10px; }
+                    td { border: 1px solid #e2e8f0; padding: 8px; }
+                    .data { color: #64748b; text-align: right; }
+                    .moeda { text-align: right; }
+                    .footer { margin-top: 20px; text-align: center; color: #94a3b8; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <h1>MFBD - Precificação Inteligente</h1>
+                <h2>${subtitulo}</h2>
+                <p class="data">Exportado em: ${new Date().toLocaleString('pt-BR')}</p>
+                <p>Total de simulações: ${dadosParaExportar.length}</p>
+                <table>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Produto</th>
+                        <th>Preço</th>
+                        <th>Margem</th>
+                        <th>Risco</th>
+                        <th>Data</th>
+                    </tr>
+        `;
         
-        if (encargosEl) encargosEl.textContent = Math.round(encargos).toLocaleString('pt-BR');
-        if (totalMensalEl) totalMensalEl.textContent = Math.round(totalMensal).toLocaleString('pt-BR');
-        if (overheadHoraEl) overheadHoraEl.textContent = formatarMoeda(overheadHora).replace('R$', 'R$');
-        if (custoHoraEl) custoHoraEl.textContent = formatarMoeda(custoHora).replace('R$', '');
-    });
+        dadosParaExportar.forEach(item => {
+            const preco = parseFloat(item.preco) || 0;
+            const margem = parseFloat(item.margem) || 0;
+            
+            conteudoHTML += `<tr>
+                <td>${item.cliente || ''}</td>
+                <td>${item.produtoTexto || item.produto || ''}</td>
+                <td class="moeda">${formatarMoeda(preco)}</td>
+                <td class="moeda">${margem.toFixed(1).replace('.', ',')}%</td>
+                <td>${item.risco || ''}</td>
+                <td>${item.data || ''}</td>
+            </tr>`;
+        });
+        
+        // Adicionar rodapé com informações da página
+        if (tipo === 'pagina') {
+            const totalPaginas = Math.ceil(historico.length / itensPorPagina);
+            conteudoHTML += `
+                <tr>
+                    <td colspan="6" style="background: #f1f5f9; text-align: center; font-weight: bold;">
+                        Página ${paginaAtual} de ${totalPaginas} | Itens por página: ${itensPorPagina}
+                    </td>
+                </tr>
+            `;
+        }
+        
+        conteudoHTML += `
+                </table>
+                <div class="footer">
+                    MFBD - Sistema de Precificação Inteligente
+                </div>
+            </body>
+            </html>
+        `;
+        
+        const blob = new Blob([conteudoHTML], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = tituloArquivo;
+        link.click();
+        
+        mostrarToast(`📑 ${tipo === 'pagina' ? 'Página' : 'Histórico completo'} exportado!`, 'success');
+        
+        if (confirm('Abrir para impressão?')) {
+            const janela = window.open('', '_blank');
+            janela.document.write(conteudoHTML);
+            janela.document.close();
+            janela.print();
+        }
+        
+    } catch(error) {
+        console.error('Erro:', error);
+        mostrarToast('❌ Erro ao exportar: ' + error.message, 'error');
+    }
 }
 
 function limparHistoricoCorrompido() {
@@ -1220,6 +1274,7 @@ function limparHistoricoCorrompido() {
         historico = historicoLimpo;
         localStorage.setItem('historicoSmartPrice', JSON.stringify(historico));
         atualizarHistorico();
+        atualizarDashboardSeAtivo();
         mostrarToast('✅ Histórico limpo e corrigido!', 'success');
     } catch (error) {
         console.error('Erro ao limpar histórico:', error);
@@ -1227,6 +1282,862 @@ function limparHistoricoCorrompido() {
     }
 }
 
+function fecharModal() {
+    document.getElementById('modalEdicao').classList.remove('active');
+}
+
+// ========== FUNÇÕES DE PAGINAÇÃO ==========
+
+function configurarPaginacao() {
+    console.log('Configurando paginação...');
+    
+    const historicoLista = document.getElementById('historico-lista');
+    if (!historicoLista) {
+        console.log('Lista de histórico não encontrada');
+        return;
+    }
+    
+    const historicoCard = document.querySelector('#historico .card');
+    if (!historicoCard) {
+        console.log('Card do histórico não encontrado');
+        return;
+    }
+    
+    // Verificar se o controle de itens por página já existe
+    if (!document.getElementById('itensPorPagina')) {
+        console.log('Criando controle de itens por página');
+        
+        // Remover qualquer controle existente para evitar duplicação
+        const existingControl = document.querySelector('.itens-por-pagina');
+        if (existingControl) {
+            existingControl.remove();
+        }
+        
+        const controleItens = document.createElement('div');
+        controleItens.className = 'itens-por-pagina';
+        controleItens.innerHTML = `
+            <label>Itens por página:</label>
+            <select id="itensPorPagina" onchange="mudarItensPorPagina(this.value)">
+                <option value="5" ${itensPorPagina === 5 ? 'selected' : ''}>5</option>
+                <option value="10" ${itensPorPagina === 10 ? 'selected' : ''}>10</option>
+                <option value="20" ${itensPorPagina === 20 ? 'selected' : ''}>20</option>
+                <option value="50" ${itensPorPagina === 50 ? 'selected' : ''}>50</option>
+            </select>
+        `;
+        
+        // Inserir antes da lista de histórico
+        historicoCard.insertBefore(controleItens, historicoLista);
+    }
+    
+    // Verificar se o container de paginação já existe
+    if (!document.getElementById('paginacao-container')) {
+        console.log('Criando container de paginação');
+        
+        // Remover qualquer container existente
+        const existingContainer = document.querySelector('.paginacao');
+        if (existingContainer) {
+            existingContainer.remove();
+        }
+        
+        const paginacaoDiv = document.createElement('div');
+        paginacaoDiv.id = 'paginacao-container';
+        paginacaoDiv.className = 'paginacao';
+        
+        // Inserir depois da lista de histórico
+        historicoLista.parentNode.insertBefore(paginacaoDiv, historicoLista.nextSibling);
+    }
+}
+
+function mudarItensPorPagina(valor) {
+    itensPorPagina = parseInt(valor);
+    paginaAtual = 1;
+    salvarPreferenciasPaginacao();
+    atualizarHistoricoComPaginacao();
+}
+
+function salvarPreferenciasPaginacao() {
+    localStorage.setItem('mfbd_itens_por_pagina', itensPorPagina);
+}
+
+function carregarPreferenciasPaginacao() {
+    const salvo = localStorage.getItem('mfbd_itens_por_pagina');
+    if (salvo) {
+        itensPorPagina = parseInt(salvo);
+    } else {
+        itensPorPagina = 10; // Garantir 10 como padrão
+    }
+}
+
+function atualizarHistoricoComPaginacao() {
+    console.log('Atualizando histórico com paginação');
+    
+    const historicoLista = document.getElementById('historico-lista');
+    if (!historicoLista) {
+        console.log('Lista de histórico não encontrada');
+        return;
+    }
+    
+    if (!historico || historico.length === 0) {
+        historicoLista.innerHTML = '<p class="text-center" style="padding: 40px;">📭 Nenhuma simulação encontrada</p>';
+        document.getElementById('total-simulacoes').textContent = '0';
+        
+        const container = document.getElementById('paginacao-container');
+        if (container) container.innerHTML = '';
+        return;
+    }
+    
+    const filtro = document.getElementById('filtroCliente')?.value?.toLowerCase() || '';
+    const ordenar = document.getElementById('ordenarPor')?.value || 'data';
+    
+    // Filtrar
+    let historicoFiltrado = historico.filter(item => 
+        item.cliente && item.cliente.toLowerCase().includes(filtro)
+    );
+    
+    // Ordenar
+    if (ordenar === 'data') {
+        historicoFiltrado.sort((a, b) => {
+            const dataA = a.data ? new Date(a.data.split(' ')[0].split('/').reverse().join('-')) : new Date(0);
+            const dataB = b.data ? new Date(b.data.split(' ')[0].split('/').reverse().join('-')) : new Date(0);
+            return dataB - dataA;
+        });
+    } else if (ordenar === 'cliente') {
+        historicoFiltrado.sort((a, b) => (a.cliente || '').localeCompare(b.cliente || ''));
+    } else if (ordenar === 'preco') {
+        historicoFiltrado.sort((a, b) => (parseFloat(b.preco) || 0) - (parseFloat(a.preco) || 0));
+    } else if (ordenar === 'margem') {
+        historicoFiltrado.sort((a, b) => (parseFloat(b.margem) || 0) - (parseFloat(a.margem) || 0));
+    }
+    
+    historicoPaginado = historicoFiltrado;
+    
+    const totalItens = historicoPaginado.length;
+    const totalPaginas = Math.ceil(totalItens / itensPorPagina);
+    
+    // Garantir que página atual é válida
+    if (paginaAtual > totalPaginas) {
+        paginaAtual = totalPaginas || 1;
+    }
+    if (paginaAtual < 1) {
+        paginaAtual = 1;
+    }
+    
+    const inicio = (paginaAtual - 1) * itensPorPagina;
+    const fim = Math.min(inicio + itensPorPagina, totalItens);
+    const itensPagina = historicoPaginado.slice(inicio, fim);
+    
+    renderizarListaHistorico(itensPagina);
+    renderizarControlesPaginacao(totalItens, totalPaginas, inicio, fim);
+    
+    document.getElementById('total-simulacoes').textContent = totalItens;
+}
+
+function renderizarListaHistorico(itens) {
+    const lista = document.getElementById('historico-lista');
+    if (!lista) return;
+    
+    lista.innerHTML = '';
+    
+    if (itens.length === 0) {
+        lista.innerHTML = '<p class="text-center" style="padding: 40px;">📭 Nenhuma simulação encontrada</p>';
+        return;
+    }
+    
+    itens.forEach(item => {
+        const indiceReal = historico.findIndex(h => h.id === item.id);
+        if (indiceReal === -1) return;
+        
+        const preco = parseFloat(item.preco) || 0;
+        const margem = parseFloat(item.margem) || 0;
+        
+        const riscoClass = item.risco === 'alto' ? 'badge-danger' : item.risco === 'medio' ? 'badge-warning' : 'badge-success';
+        const riscoLabel = item.risco === 'alto' ? 'Alto' : item.risco === 'medio' ? 'Médio' : 'Baixo';
+        const isRecent = indiceReal === 0;
+        
+        lista.innerHTML += `
+            <div class="historico-item" onclick="abrirModalEdicao(${indiceReal})">
+                <div class="historico-header">
+                    <span class="historico-titulo">
+                        ${item.cliente || 'Sem nome'}
+                        ${isRecent ? '<span style="background:#3b82f6; color:white; padding:2px 8px; border-radius:12px; font-size:10px;">🆕 Recente</span>' : ''}
+                        <span style="font-size:10px; color:#64748b;">${item.id || ''}</span>
+                    </span>
+                    <div class="historico-acoes" onclick="event.stopPropagation()">
+                        <button style="background:#f59e0b; color:white;" onclick="editarItem(${indiceReal})">✏️</button>
+                        <button style="background:#ef4444; color:white;" onclick="excluirItem(${indiceReal})">🗑️</button>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 10px;">
+                    <div><small>Produto</small><br><strong>${item.produtoTexto || item.produto || 'N/A'}</strong></div>
+                    <div><small>Preço</small><br><strong>${formatarMoeda(preco)}</strong></div>
+                    <div><small>Margem</small><br><strong>${margem.toFixed(1).replace('.', ',')}%</strong></div>
+                    <div><small>Risco</small><br><span class="badge ${riscoClass}">${riscoLabel}</span></div>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 8px;">
+                    <span>${item.data || ''}</span>
+                    ${isRecent ? '<span style="color:#3b82f6; float:right;">⬆️ Último</span>' : ''}
+                </div>
+            </div>
+        `;
+    });
+}
+
+function renderizarControlesPaginacao(totalItens, totalPaginas, inicio, fim) {
+    const container = document.getElementById('paginacao-container');
+    if (!container) return;
+    
+    if (totalItens === 0 || totalPaginas <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = `
+        <div class="paginacao-info">
+            Mostrando ${inicio + 1}-${fim} de ${totalItens} resultados
+        </div>
+        <div class="paginacao-controles">
+    `;
+    
+    // Botão Primeira
+    html += `<button class="paginacao-btn" onclick="irParaPagina(1)" ${paginaAtual === 1 ? 'disabled' : ''}>⏮️</button>`;
+    
+    // Botão Anterior
+    html += `<button class="paginacao-btn" onclick="irParaPagina(${paginaAtual - 1})" ${paginaAtual === 1 ? 'disabled' : ''}>◀️</button>`;
+    
+    // Números das páginas
+    const maxBotoes = 5;
+    let inicioPaginas = Math.max(1, paginaAtual - Math.floor(maxBotoes / 2));
+    let fimPaginas = Math.min(totalPaginas, inicioPaginas + maxBotoes - 1);
+    
+    if (fimPaginas - inicioPaginas + 1 < maxBotoes) {
+        inicioPaginas = Math.max(1, fimPaginas - maxBotoes + 1);
+    }
+    
+    if (inicioPaginas > 1) {
+        html += `<button class="paginacao-btn" onclick="irParaPagina(1)">1</button>`;
+        if (inicioPaginas > 2) {
+            html += `<span class="paginacao-ellipsis">...</span>`;
+        }
+    }
+    
+    for (let i = inicioPaginas; i <= fimPaginas; i++) {
+        html += `<button class="paginacao-btn ${i === paginaAtual ? 'active' : ''}" onclick="irParaPagina(${i})">${i}</button>`;
+    }
+    
+    if (fimPaginas < totalPaginas) {
+        if (fimPaginas < totalPaginas - 1) {
+            html += `<span class="paginacao-ellipsis">...</span>`;
+        }
+        html += `<button class="paginacao-btn" onclick="irParaPagina(${totalPaginas})">${totalPaginas}</button>`;
+    }
+    
+    // Botão Próximo
+    html += `<button class="paginacao-btn" onclick="irParaPagina(${paginaAtual + 1})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>▶️</button>`;
+    
+    // Botão Última
+    html += `<button class="paginacao-btn" onclick="irParaPagina(${totalPaginas})" ${paginaAtual === totalPaginas ? 'disabled' : ''}>⏭️</button>`;
+    
+    html += `</div>`;
+    
+    // Select rápido de página
+    if (totalPaginas > 5) {
+        html += `
+            <div class="paginacao-rapida">
+                <span>Ir para página:</span>
+                <input type="number" min="1" max="${totalPaginas}" value="${paginaAtual}" onchange="irParaPagina(parseInt(this.value))">
+                <span>de ${totalPaginas}</span>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function irParaPagina(pagina) {
+    pagina = parseInt(pagina);
+    if (isNaN(pagina)) return;
+    
+    const totalPaginas = Math.ceil(historicoPaginado.length / itensPorPagina);
+    
+    if (pagina < 1 || pagina > totalPaginas) {
+        return;
+    }
+    
+    paginaAtual = pagina;
+    atualizarHistoricoComPaginacao();
+}
+
+// Função principal do histórico (com paginação)
+function atualizarHistorico() {
+    console.log('Atualizando histórico...');
+    carregarPreferenciasPaginacao();
+    configurarPaginacao();
+    atualizarHistoricoComPaginacao();
+}
+
+// ========== FUNÇÕES DE NAVEGAÇÃO ==========
+
+function showTab(tabName) {
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+    document.getElementById(tabName).classList.add('active');
+    
+    if (tabName === 'historico') {
+        setTimeout(() => {
+            carregarPreferenciasPaginacao();
+            configurarPaginacao();
+            atualizarHistoricoComPaginacao();
+        }, 100);
+    }
+    
+    if (tabName === 'dashboard') {
+        setTimeout(() => {
+            inicializarGraficos();
+        }, 100);
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ========== FUNÇÕES DE DASHBOARD ==========
+
+function inicializarGraficos() {
+    destruirGraficos();
+    atualizarTodosGraficos();
+}
+
+function destruirGraficos() {
+    if (graficoPrecos) { graficoPrecos.destroy(); graficoPrecos = null; }
+    if (graficoSegmentos) { graficoSegmentos.destroy(); graficoSegmentos = null; }
+    if (graficoMargens) { graficoMargens.destroy(); graficoMargens = null; }
+    if (graficoRisco) { graficoRisco.destroy(); graficoRisco = null; }
+    if (graficoTopClientes) { graficoTopClientes.destroy(); graficoTopClientes = null; }
+    if (graficoTendenciaMargens) { graficoTendenciaMargens.destroy(); graficoTendenciaMargens = null; }
+}
+
+window.mudarPeriodoGraficos = function(periodo, event) {
+    periodoAtualGraficos = periodo;
+    
+    document.querySelectorAll('.chart-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+    
+    const periodoTexto = {
+        '7d': 'Últimos 7 dias',
+        '30d': 'Últimos 30 dias',
+        '90d': 'Últimos 90 dias',
+        'all': 'Todo período'
+    };
+    
+    const periodoPrecoEl = document.getElementById('periodo-preco');
+    const periodoMargemEl = document.getElementById('periodo-margem');
+    if (periodoPrecoEl) periodoPrecoEl.textContent = periodoTexto[periodo];
+    if (periodoMargemEl) periodoMargemEl.textContent = periodoTexto[periodo];
+    
+    atualizarTodosGraficos();
+};
+
+function filtrarPorPeriodo(items, periodo) {
+    if (periodo === 'all' || !items || items.length === 0) {
+        return items;
+    }
+    
+    const agora = new Date();
+    const limite = new Date();
+    
+    switch(periodo) {
+        case '7d':
+            limite.setDate(agora.getDate() - 7);
+            break;
+        case '30d':
+            limite.setDate(agora.getDate() - 30);
+            break;
+        case '90d':
+            limite.setDate(agora.getDate() - 90);
+            break;
+        default:
+            return items;
+    }
+    
+    return items.filter(item => {
+        if (!item.data) return false;
+        const partesData = item.data.split(' ')[0].split('/');
+        if (partesData.length !== 3) return false;
+        const dataItem = new Date(partesData[2], partesData[1] - 1, partesData[0]);
+        return dataItem >= limite;
+    });
+}
+
+function atualizarDashboardSeAtivo() {
+    if (document.getElementById('dashboard').classList.contains('active')) {
+        destruirGraficos();
+        atualizarTodosGraficos();
+    }
+}
+
+function atualizarTodosGraficos() {
+    if (!historico || historico.length === 0) {
+        mostrarGraficosVazios();
+        return;
+    }
+    
+    const historicoFiltrado = filtrarPorPeriodo(historico, periodoAtualGraficos);
+    
+    atualizarKPIs(historicoFiltrado);
+    criarGraficoPrecos(historicoFiltrado);
+    criarGraficoSegmentos();
+    criarGraficoMargens();
+    criarGraficoRisco();
+    criarGraficoTopClientes();
+    criarGraficoTendenciaMargens(historicoFiltrado);
+}
+
+function mostrarGraficosVazios() {
+    destruirGraficos();
+    
+    const containers = document.querySelectorAll('.chart-container');
+    containers.forEach(container => {
+        const canvas = container.querySelector('canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    });
+    
+    document.getElementById('kpi-total-simulacoes').textContent = '0';
+    document.getElementById('kpi-ticket-medio').textContent = 'R$ 0,00';
+    document.getElementById('kpi-margem-media').textContent = '0,0%';
+    document.getElementById('kpi-risco-alto').textContent = '0';
+    
+    document.getElementById('stat-maior-preco').textContent = 'R$ 0,00';
+    document.getElementById('stat-menor-preco').textContent = 'R$ 0,00';
+    document.getElementById('stat-media-preco').textContent = 'R$ 0,00';
+    document.getElementById('stat-maior-margem').textContent = '0,0%';
+    document.getElementById('stat-media-margem').textContent = '0,0%';
+    
+    document.getElementById('legenda-segmentos').innerHTML = '';
+    document.getElementById('legenda-risco').innerHTML = '';
+}
+
+function atualizarKPIs(dados) {
+    const total = dados.length;
+    document.getElementById('kpi-total-simulacoes').textContent = total;
+    
+    let somaPrecos = 0;
+    dados.forEach(item => somaPrecos += parseFloat(item.preco) || 0);
+    const ticketMedio = total > 0 ? somaPrecos / total : 0;
+    document.getElementById('kpi-ticket-medio').textContent = formatarMoeda(ticketMedio);
+    
+    let somaMargens = 0;
+    dados.forEach(item => somaMargens += parseFloat(item.margem) || 0);
+    const margemMedia = total > 0 ? somaMargens / total : 0;
+    document.getElementById('kpi-margem-media').textContent = margemMedia.toFixed(1).replace('.', ',') + '%';
+    
+    const riscoAlto = dados.filter(item => item.risco === 'alto').length;
+    document.getElementById('kpi-risco-alto').textContent = riscoAlto;
+}
+
+function criarGraficoPrecos(dados) {
+    const canvas = document.getElementById('graficoPrecos');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    if (dados.length === 0) {
+        if (graficoPrecos) graficoPrecos.destroy();
+        graficoPrecos = null;
+        document.getElementById('stat-maior-preco').textContent = 'R$ 0,00';
+        document.getElementById('stat-menor-preco').textContent = 'R$ 0,00';
+        document.getElementById('stat-media-preco').textContent = 'R$ 0,00';
+        return;
+    }
+    
+    const dadosOrdenados = [...dados].sort((a, b) => {
+        const dataA = a.data ? new Date(a.data.split(' ')[0].split('/').reverse().join('-')) : new Date(0);
+        const dataB = b.data ? new Date(b.data.split(' ')[0].split('/').reverse().join('-')) : new Date(0);
+        return dataA - dataB;
+    });
+    
+    const labels = dadosOrdenados.map(item => item.data ? item.data.split(' ')[0] : '');
+    const precos = dadosOrdenados.map(item => parseFloat(item.preco) || 0);
+    
+    const precosValidos = precos.filter(p => p > 0);
+    const maiorPreco = precosValidos.length > 0 ? Math.max(...precosValidos) : 0;
+    const menorPreco = precosValidos.length > 0 ? Math.min(...precosValidos) : 0;
+    const mediaPreco = precosValidos.length > 0 ? precosValidos.reduce((a, b) => a + b, 0) / precosValidos.length : 0;
+    
+    document.getElementById('stat-maior-preco').textContent = formatarMoeda(maiorPreco);
+    document.getElementById('stat-menor-preco').textContent = formatarMoeda(menorPreco);
+    document.getElementById('stat-media-preco').textContent = formatarMoeda(mediaPreco);
+    
+    if (graficoPrecos) graficoPrecos.destroy();
+    
+    graficoPrecos = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Valor da Proposta (R$)',
+                data: precos,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderWidth: 3,
+                pointBackgroundColor: '#1e293b',
+                pointBorderColor: 'white',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 0});
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoSegmentos() {
+    const canvas = document.getElementById('graficoSegmentos');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const segmentos = {};
+    historico.forEach(item => {
+        const seg = item.segmento || 'outros';
+        segmentos[seg] = (segmentos[seg] || 0) + 1;
+    });
+    
+    const labels = Object.keys(segmentos).map(seg => {
+        const nomes = {
+            'tecnologia': 'Tecnologia', 'varejo': 'Varejo', 'industria': 'Indústria',
+            'servicos': 'Serviços', 'saude': 'Saúde', 'educacao': 'Educação',
+            'financeiro': 'Financeiro', 'consultoria': 'Consultoria',
+            'marketing': 'Marketing', 'outros': 'Outros'
+        };
+        return nomes[seg] || seg;
+    });
+    const valores = Object.values(segmentos);
+    
+    const cores = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#64748b'];
+    
+    const legendaHtml = labels.map((label, i) => `
+        <div class="legenda-item">
+            <span class="legenda-cor" style="background: ${cores[i % cores.length]}"></span>
+            <span>${label}: ${valores[i]}</span>
+        </div>
+    `).join('');
+    document.getElementById('legenda-segmentos').innerHTML = legendaHtml;
+    
+    if (graficoSegmentos) graficoSegmentos.destroy();
+    
+    graficoSegmentos = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: valores,
+                backgroundColor: cores.slice(0, labels.length),
+                borderWidth: 2,
+                borderColor: 'white'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentual = (context.parsed / total * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed} (${percentual}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '65%'
+        }
+    });
+}
+
+function criarGraficoMargens() {
+    const canvas = document.getElementById('graficoMargens');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const margensPorTipo = {};
+    historico.forEach(item => {
+        const tipo = item.cobrancaTexto || item.cobranca || 'outros';
+        const margem = parseFloat(item.margem) || 0;
+        if (!margensPorTipo[tipo]) {
+            margensPorTipo[tipo] = { soma: 0, count: 0 };
+        }
+        margensPorTipo[tipo].soma += margem;
+        margensPorTipo[tipo].count++;
+    });
+    
+    const labels = Object.keys(margensPorTipo);
+    const valores = labels.map(tipo => 
+        (margensPorTipo[tipo].soma / margensPorTipo[tipo].count).toFixed(1)
+    );
+    
+    const todasMargens = historico.map(item => parseFloat(item.margem) || 0).filter(m => m > 0);
+    const maiorMargem = todasMargens.length > 0 ? Math.max(...todasMargens) : 0;
+    const mediaMargem = todasMargens.length > 0 ? todasMargens.reduce((a, b) => a + b, 0) / todasMargens.length : 0;
+    
+    document.getElementById('stat-maior-margem').textContent = maiorMargem.toFixed(1).replace('.', ',') + '%';
+    document.getElementById('stat-media-margem').textContent = mediaMargem.toFixed(1).replace('.', ',') + '%';
+    
+    if (graficoMargens) graficoMargens.destroy();
+    
+    graficoMargens = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Margem Média (%)',
+                data: valores,
+                backgroundColor: '#8b5cf6',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: function(value) { return value + '%'; } }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoRisco() {
+    const canvas = document.getElementById('graficoRisco');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const riscos = {
+        baixo: historico.filter(item => item.risco === 'baixo').length,
+        medio: historico.filter(item => item.risco === 'medio').length,
+        alto: historico.filter(item => item.risco === 'alto').length
+    };
+    
+    const cores = { baixo: '#10b981', medio: '#f59e0b', alto: '#ef4444' };
+    
+    const legendaHtml = Object.keys(riscos).map(risco => `
+        <div class="legenda-item">
+            <span class="legenda-cor" style="background: ${cores[risco]}"></span>
+            <span>${risco.charAt(0).toUpperCase() + risco.slice(1)}: ${riscos[risco]}</span>
+        </div>
+    `).join('');
+    document.getElementById('legenda-risco').innerHTML = legendaHtml;
+    
+    if (graficoRisco) graficoRisco.destroy();
+    
+    graficoRisco = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Baixo Risco', 'Médio Risco', 'Alto Risco'],
+            datasets: [{
+                data: [riscos.baixo, riscos.medio, riscos.alto],
+                backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                borderWidth: 2,
+                borderColor: 'white'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentual = (context.parsed / total * 100).toFixed(1);
+                            return `${context.label}: ${context.parsed} (${percentual}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoTopClientes() {
+    const canvas = document.getElementById('graficoTopClientes');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    const clientes = {};
+    historico.forEach(item => {
+        const cliente = item.cliente || 'Não informado';
+        const valor = parseFloat(item.preco) || 0;
+        if (!clientes[cliente]) clientes[cliente] = 0;
+        clientes[cliente] += valor;
+    });
+    
+    const topClientes = Object.entries(clientes)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
+    
+    const labels = topClientes.map(c => c[0]);
+    const valores = topClientes.map(c => c[1]);
+    
+    if (graficoTopClientes) graficoTopClientes.destroy();
+    
+    graficoTopClientes = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total em Propostas (R$)',
+                data: valores,
+                backgroundColor: '#10b981',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'R$ ' + context.parsed.x.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 0});
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function criarGraficoTendenciaMargens(dados) {
+    const canvas = document.getElementById('graficoTendenciaMargens');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    if (dados.length === 0) {
+        if (graficoTendenciaMargens) graficoTendenciaMargens.destroy();
+        graficoTendenciaMargens = null;
+        return;
+    }
+    
+    const dadosOrdenados = [...dados].sort((a, b) => {
+        const dataA = a.data ? new Date(a.data.split(' ')[0].split('/').reverse().join('-')) : new Date(0);
+        const dataB = b.data ? new Date(b.data.split(' ')[0].split('/').reverse().join('-')) : new Date(0);
+        return dataA - dataB;
+    });
+    
+    const labels = dadosOrdenados.map(item => item.data ? item.data.split(' ')[0] : '');
+    const margens = dadosOrdenados.map(item => parseFloat(item.margem) || 0);
+    
+    const mediaMovel = [];
+    for (let i = 0; i < margens.length; i++) {
+        if (i < 2) {
+            mediaMovel.push(null);
+        } else {
+            const media = (margens[i] + margens[i-1] + margens[i-2]) / 3;
+            mediaMovel.push(Number(media.toFixed(1)));
+        }
+    }
+    
+    if (graficoTendenciaMargens) graficoTendenciaMargens.destroy();
+    
+    graficoTendenciaMargens = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Margem (%)',
+                    data: margens,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    tension: 0.3
+                },
+                {
+                    label: 'Tendência (Média 3)',
+                    data: mediaMovel,
+                    borderColor: '#3b82f6',
+                    borderWidth: 3,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (context.parsed.y !== null) {
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
+                            }
+                            return null;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: function(value) { return value + '%'; } }
+                }
+            }
+        }
+    });
+}
+
+// ========== INICIALIZAÇÃO ==========
 window.onload = function() {
     console.log('🚀 Inicializando MFBD v6.0...');
     
@@ -1275,8 +2186,37 @@ window.onload = function() {
         if (event.target === document.getElementById('modalEdicao')) fecharModal();
     });
     
+    // Configurar event listeners da paginação
+    const filtroCliente = document.getElementById('filtroCliente');
+    const ordenarPor = document.getElementById('ordenarPor');
+    
+    if (filtroCliente) {
+        filtroCliente.addEventListener('input', function() {
+            paginaAtual = 1;
+            atualizarHistoricoComPaginacao();
+        });
+    }
+    
+    if (ordenarPor) {
+        ordenarPor.addEventListener('change', function() {
+            paginaAtual = 1;
+            atualizarHistoricoComPaginacao();
+        });
+    }
+    
+    // Carregar preferências de paginação
+    carregarPreferenciasPaginacao();
+    
+    // Atualizar histórico
     atualizarHistorico();
     indiceEditando = -1;
+    
+    // Verificar se a dashboard está ativa na inicialização
+    setTimeout(() => {
+        if (document.getElementById('dashboard').classList.contains('active')) {
+            inicializarGraficos();
+        }
+    }, 500);
     
     console.log('✅ MFBD - Sistema carregado v6.0');
 };
