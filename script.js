@@ -16,7 +16,7 @@ let itensPorPagina = 10; // Padrão 10 itens
 let historicoPaginado = [];
 
 // ========== CONFIGURAÇÃO GOOGLE SHEETS ==========
-const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw2pCihEM-o7djOYTWPf7kZoBNT366oIoV6D3rUkZEyM0FV8lINpGr57hJGw56dX0NM/exec';
+const GOOGLE_SHEETS_URL = 'https://script.google.com/macros/s/AKfycbzsKAR7qRhydj0g8_1JSL4k0AnmYTXNo4wBVV3hAtgRELlDhnDU4KvE3ZJLvdF7JC5c/exec';
 
 // ========== GRÁFICOS ==========
 let graficoPrecos, graficoSegmentos, graficoMargens, graficoRisco, graficoTopClientes, graficoTendenciaMargens;
